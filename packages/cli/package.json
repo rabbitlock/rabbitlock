@@ -1,0 +1,51 @@
+{
+  "name": "@rabbitlock/cli",
+  "version": "0.1.0",
+  "description": "Credential broker for coding agents: the agent gets placeholders, RabbitLock injects real credentials only on approved outbound requests.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "rabbitlock": "bin/rabbitlock.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "vendor",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "prepack": "node scripts/vendor-crypto.mjs"
+  },
+  "dependencies": {
+    "node-forge": "^1.4.3",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@rabbitlock/crypto-wasm": "*"
+  },
+  "keywords": [
+    "ai-agents",
+    "coding-agents",
+    "secrets",
+    "credentials",
+    "proxy",
+    "claude-code",
+    "security"
+  ],
+  "homepage": "https://rabbitlock.com",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rabbitlock/rabbitlock",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/rabbitlock/rabbitlock/issues"
+  }
+}

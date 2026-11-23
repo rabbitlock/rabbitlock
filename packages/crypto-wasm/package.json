@@ -1,0 +1,15 @@
+{
+  "name": "@rabbitlock/crypto-wasm",
+  "version": "0.1.0",
+  "main": "pkg/rabbitlock_crypto.js",
+  "types": "pkg/rabbitlock_crypto.d.ts",
+  "files": [
+    "pkg"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "test": "cargo test"
+  },
+  "private": true,
+  "license": "Apache-2.0"
+}

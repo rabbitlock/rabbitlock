@@ -1,0 +1,17 @@
+{
+  "name": "rabbitlock-oss",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test:cli && npm run test:crypto",
+    "test:cli": "npm test --workspace=@rabbitlock/cli",
+    "test:crypto": "cd packages/crypto-wasm && cargo test",
+    "build:crypto": "npm run build --workspace=@rabbitlock/crypto-wasm"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0"
+}

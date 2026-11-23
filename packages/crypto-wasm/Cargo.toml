@@ -1,0 +1,44 @@
+[package]
+name = "rabbitlock-crypto"
+version = "0.1.0"
+edition = "2021"
+description = "RabbitLock crypto core compiled to WebAssembly."
+repository = "https://github.com/rabbitlock/rabbitlock"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_yaml = "0.9"
+serde_bytes = "0.11"
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
+rand_core = "0.6"
+rand_chacha = "0.3"
+sha2 = "0.10"
+hkdf = "0.12"
+hmac = "0.12"
+hex = "0.4"
+aes-gcm = "0.10.3"
+base64 = "0.22.1"
+
+# Post-Quantum: RustCrypto ML-KEM version 0.2 (uses rand_core 0.6)
+ml-kem = "0.2"
+
+# Classical: X25519 for hybrid layer
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+
+# SHA3 for combining shared secrets
+sha3 = "0.10"
+
+# For Wasm serialization
+serde-wasm-bindgen = "0.6"
+
+
+# File compression
+zip = { version = "0.6", default-features = false, features = ["deflate", "time"] }
+sharks = "0.5.0"
