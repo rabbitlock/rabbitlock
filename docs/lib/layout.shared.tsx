@@ -16,7 +16,6 @@ export function baseOptions(): BaseLayoutProps {
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
     links: [
       { text: 'rabbitlock.com', url: siteUrl, external: true },
-      { text: 'Security', url: '/security' },
     ],
   };
 }
