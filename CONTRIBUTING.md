@@ -19,6 +19,17 @@ npm run test:crypto      # needs a Rust toolchain
 
 On Linux, install `bubblewrap` to run the sandbox tests; without it they are skipped.
 
+### Documentation
+
+The docs site lives in `docs/` (Next.js + Fumadocs, static export under the `/docs` base path). Pages are MDX in `docs/content/docs`.
+
+```bash
+cd docs && npm install && npm run dev     # http://localhost:3020/docs
+npm run build                             # static output in docs/out
+```
+
+Docs follow the same rule as code: every claim of protection must be backed by a test, or stated as a limit on the Limits page.
+
 ## Ground rules
 
 - Security claims in docs must be backed by a test, or written as a stated limit.

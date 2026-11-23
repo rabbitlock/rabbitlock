@@ -1,0 +1,17 @@
+{
+  "title": "RabbitLock",
+  "pages": [
+    "---Get started---",
+    "index",
+    "quickstart",
+    "---Guides---",
+    "...guides",
+    "---Concepts---",
+    "...concepts",
+    "---Reference---",
+    "...reference",
+    "---More---",
+    "security",
+    "changelog"
+  ]
+}

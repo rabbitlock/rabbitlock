@@ -1,0 +1,43 @@
+---
+title: Security
+description: The threat model. What is protected, what is up to you, and what is not covered.
+---
+
+RabbitLock is designed against one adversary first: **a coding agent that has been prompt-injected and can run any command as you**. Secondary threats are passive leaks: transcripts, logs, shell history, crash reports and model-provider retention.
+
+## Threat model
+
+| Threat | Status | How |
+| --- | --- | --- |
+| The agent prints, logs or pastes the token into its context | **Protected** | It only ever has a per-session placeholder |
+| A prompt injection makes the agent send the token to an attacker | **Protected** | Real values go only to that secret's allowed hosts; elsewhere the request gets the placeholder or a `403` |
+| The token is sent over unencrypted HTTP | **Protected** | Never injected over cleartext |
+| A spoofed `Host` header redirects an allowed secret | **Protected** | Policy and delivery use the `CONNECT` target |
+| The token is placed in a request body | **Protected** | JSON, form and text bodies up to 1 MiB get the same host checks; others carry only the placeholder |
+| The agent reads your key file or the CA key | **Protected** | [Agent sandbox](/concepts/sandbox); not with `--sandbox off` or where no sandbox is available (RabbitLock warns) |
+| The agent edits the policy or forges receipts | **Protected** | Read-only inside the sandbox |
+| The agent reads the broker's environment (`RABBITLOCK_SEED_HEX`) | **Protected** | The sandbox hides other processes when the seed comes from the environment |
+| A sensitive key is used without anyone knowing | **Protected** | `approval` per secret; every use is receipted |
+| The encrypted secrets file is tampered with | **Protected** | Integrity is checked on every read; the run stops |
+| The machine has no usable sandbox | **Your part** | Install `bubblewrap` on Linux; use `--sandbox on` to refuse |
+| Tokens are broader than the job needs | **Your part** | Use narrowly scoped tokens |
+| The agent misuses a token on an allowed host | **Not covered** | RabbitLock controls where a token goes, not what it does there |
+| An allowed API echoes the token in its response | **Not covered yet** | Response scrubbing is planned |
+
+Every **Protected** row is covered by automated tests in [`packages/cli/test`](https://github.com/rabbitlock/rabbitlock/tree/main/packages/cli/test). They run on macOS and Linux in CI.
+
+## Keys on your machine
+
+| File | Sensitivity |
+| --- | --- |
+| `~/.rabbitlock/identity` | Decrypts your secrets. Owner-only; denied to the agent. |
+| `~/.rabbitlock/ca/rabbitlock-ca.key` | Can impersonate websites to programs that trust the CA. Owner-only; denied to the agent. |
+| `~/.rabbitlock/ca/rabbitlock-ca.pem`, `bundle.pem` | Public; tools read them to verify TLS. |
+
+## What leaves your machine
+
+The CLI sends **no telemetry** and nothing to RabbitLock. Its only outbound traffic is your agent's own requests, forwarded to their destinations.
+
+## Reporting a vulnerability
+
+Email **security@rabbitlock.com**. Please don't open a public issue for security problems. We aim to acknowledge reports within 3 business days.

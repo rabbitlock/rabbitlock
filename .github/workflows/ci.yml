@@ -38,3 +38,28 @@ jobs:
 
       - name: Package dry run
         run: npm pack --dry-run --workspace=@rabbitlock/cli
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Check key routes exist
+        run: |
+          for f in index.html quickstart.html concepts/how-it-works.html reference/cli.html security.html llms.txt api/search; do
+            test -e "out/$f" || { echo "missing out/$f"; exit 1; }
+          done

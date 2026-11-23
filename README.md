@@ -29,12 +29,13 @@ secrets:
 - **Not yet:** response scrubbing, HTTP/2 and WebSocket interception, and substitution in multipart, compressed or >1 MiB bodies.
 - **Go tools on macOS** (for example `gh`) ignore `SSL_CERT_FILE`. Run `rabbitlock ca trust` once.
 
-Details: [docs/agent-broker.md](docs/agent-broker.md) · [docs/getting-started.md](docs/getting-started.md) · [SECURITY.md](SECURITY.md)
+Documentation: [rabbitlock.com/docs](https://rabbitlock.com/docs) (source in [`docs/`](docs)) · [Security](SECURITY.md)
 
 ## Repository
 
 - `packages/cli`: the `rabbitlock` CLI and broker (Node ≥ 20, no build step).
 - `packages/crypto-wasm`: crypto core (Rust → WebAssembly), bundled into the CLI.
+- `docs`: the documentation site (Fumadocs, static export served at `rabbitlock.com/docs`).
 
 ```bash
 npm install

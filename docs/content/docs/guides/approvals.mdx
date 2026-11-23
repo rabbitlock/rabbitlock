@@ -1,0 +1,40 @@
+---
+title: Human approvals
+description: Require a person to approve each use, or the first use per session, of a sensitive secret.
+---
+
+```yaml title="rabbitlock.agent.yaml"
+secrets:
+  STRIPE_API_KEY:
+    hosts: [api.stripe.com]
+    approval: once     # never | once | every
+```
+
+| Mode | Behaviour |
+| --- | --- |
+| `never` (default) | Injected whenever the host is allowed |
+| `once` | Asked the first time in a session; "Allow for session" covers the rest of the session |
+| `every` | Asked on every request that uses the secret |
+
+## The prompt
+
+The agent owns your terminal, so RabbitLock asks through an operating-system dialog showing the secret name, the method and the full URL:
+
+- **macOS:** a native dialog (`osascript`)
+- **Linux:** `zenity`, if installed
+
+Choices are **Allow once**, **Allow for session** and **Deny**. These all count as a deny:
+
+- clicking Deny
+- no answer within **120 seconds**
+- no dialog available on this machine
+
+A denied request gets a `403` and never leaves your machine, and a `denied_approval` receipt is written. Parallel requests share a single prompt.
+
+## Headless and CI
+
+Set `RABBITLOCK_APPROVER=allow` or `RABBITLOCK_APPROVER=deny` to answer without a dialog. In CI, `deny` makes gated secrets unusable, which is usually what you want.
+
+<Callout type="warn">
+The approval logic (once, every, deny and timeout) is covered by automated tests with a stubbed approver. The OS dialogs themselves have not been exercised by an automated end-to-end test yet.
+</Callout>

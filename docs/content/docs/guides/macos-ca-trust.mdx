@@ -1,0 +1,30 @@
+---
+title: Trust the CA on macOS
+description: Make Go tools such as gh work through RabbitLock on macOS.
+---
+
+Most tools trust RabbitLock's local CA through the environment variables it sets (`SSL_CERT_FILE`, `CURL_CA_BUNDLE`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`, `GIT_SSL_CAINFO`). **Go programs on macOS ignore those** and use the system keychain. Without the step below, `gh` fails on allowed hosts with:
+
+```text
+tls: failed to verify certificate: x509: certificate signed by unknown authority
+```
+
+## Trust it once
+
+```bash
+rabbitlock ca trust
+```
+
+This shows the exact `security` command it will run and asks for confirmation. macOS then asks for your password. Use `--yes` to skip RabbitLock's confirmation in scripts; macOS still asks for the password.
+
+## Undo
+
+```bash
+rabbitlock ca untrust
+```
+
+<Callout type="warn" title="What trusting means">
+A trusted CA can vouch for **any** website to programs on your Mac. RabbitLock's CA key lives in `~/.rabbitlock/ca/` (owner-only), and the agent sandbox denies the agent read access to it. Keep it that way. Run `rabbitlock ca untrust` if you stop using RabbitLock.
+</Callout>
+
+On Linux this step isn't needed; `rabbitlock ca trust` prints how to trust the CA system-wide if you want to anyway.

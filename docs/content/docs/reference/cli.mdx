@@ -1,0 +1,85 @@
+---
+title: CLI
+description: Every rabbitlock command, flag and default.
+---
+
+```text
+rabbitlock <command> [options]
+```
+
+Global option: `--policy PATH` uses a specific policy file. Without it, RabbitLock uses `rabbitlock.agent.yaml` from the current directory or the nearest parent.
+
+## `init`
+
+```bash
+rabbitlock init
+```
+
+- Creates `~/.rabbitlock/identity` (mode `0600`) if it doesn't exist. An existing identity is never overwritten.
+- Creates the local CA in `~/.rabbitlock/ca/` if needed.
+- Writes an example `rabbitlock.agent.yaml`, unless one already exists, with your public key as the first recipient.
+- Prints your public key and the CA certificate path.
+
+## `set NAME`
+
+```bash
+echo -n "value" | rabbitlock set NAME
+rabbitlock set NAME            # hidden interactive prompt
+```
+
+Encrypts `NAME` into the secrets file for every recipient (your key is always included). `NAME` must match `^[A-Z][A-Z0-9_]*$`.
+
+- **From stdin:** one trailing newline is stripped.
+- **Empty values** are refused.
+- **Not in the policy:** if `NAME` isn't listed yet, RabbitLock warns that agents won't receive it.
+
+## `rm NAME`
+
+Removes `NAME` from the secrets file and re-encrypts. It's an error if `NAME` isn't stored.
+
+## `ls`
+
+Lists every name in the secrets file or the policy, with its status. Never prints values.
+
+```text
+GITHUB_TOKEN                 api.github.com,github.com approval=never
+STRIPE_API_KEY               MISSING VALUE
+OLD_TOKEN                    not brokered (no policy)
+```
+
+## `run`
+
+```bash
+rabbitlock run [--sandbox auto|on|off] [--quiet] -- <command> [args...]
+```
+
+Runs `<command>` with brokered credentials. See [How it works](/concepts/how-it-works).
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--sandbox` | `auto` | `auto` sandboxes when possible and otherwise warns; `on` refuses to start without a sandbox; `off` disables it. See [Agent sandbox](/concepts/sandbox). |
+| `--quiet` | off | Suppress the startup line |
+
+The command fails before launching if the policy names a secret that isn't stored. It exits with the agent's exit code, and forwards `SIGINT` and `SIGTERM` to the agent.
+
+## `receipts`
+
+```bash
+rabbitlock receipts [--tail N]     # default 20
+```
+
+Prints recent receipts: time, decision, secrets, request and status. See [Receipt format](/reference/receipt-format).
+
+## `ca`
+
+```bash
+rabbitlock ca                      # print the local CA certificate path
+rabbitlock ca trust [--yes]        # macOS: trust it in the login keychain
+rabbitlock ca untrust [--yes]      # macOS: remove that trust
+```
+
+`trust` and `untrust` print the exact `security` command and ask for confirmation. `--yes` skips RabbitLock's confirmation, but macOS still asks for your password. Not running in a terminal and no `--yes`? It refuses. On Linux, `trust` prints instructions instead. See [Trust the CA on macOS](/guides/macos-ca-trust).
+
+## `help`
+
+`rabbitlock help`, `--help` or `-h`.

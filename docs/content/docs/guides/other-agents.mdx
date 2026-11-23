@@ -1,0 +1,49 @@
+---
+title: Other agents and tools
+description: Codex, Cursor, Aider, MCP servers and plain shell sessions.
+---
+
+RabbitLock works with any process that honours standard proxy and certificate settings. Wrap the agent, or a shell you hand to it:
+
+```bash
+rabbitlock run -- aider
+rabbitlock run -- bash          # an interactive shell with brokered credentials
+```
+
+Child processes inherit the environment, so MCP servers and tools launched by the agent are brokered too.
+
+<Callout type="warn" title="Tested so far">
+End-to-end tests cover curl, git over HTTPS and Node `fetch`, and Claude Code was verified live. Other agents should work wherever their tools honour the proxy settings, but they haven't been tested yet. Please [report what breaks](https://github.com/rabbitlock/rabbitlock/issues).
+</Callout>
+
+## How the agent is isolated
+
+For anything other than `claude`, RabbitLock wraps the command in an OS sandbox:
+
+| Platform | Sandbox | Startup line shows |
+| --- | --- | --- |
+| macOS | `sandbox-exec` (Seatbelt) | `sandbox: seatbelt` |
+| Linux | `bwrap` (bubblewrap); install the `bubblewrap` package | `sandbox: bwrap` |
+| Windows | not supported | `sandbox: unavailable` |
+
+If the sandbox can't be applied, RabbitLock prints a warning and runs unsandboxed. Use `--sandbox on` to make that an error instead. See [Agent sandbox](/concepts/sandbox).
+
+### Agents with their own sandbox
+
+macOS can't nest one Seatbelt sandbox inside another. Agents that sandbox their own commands with Seatbelt (Codex CLI does on macOS) will have those commands fail inside RabbitLock's sandbox. Only Claude Code is handled automatically today, by configuring its own sandbox instead of wrapping it. For other self-sandboxing agents:
+
+1. Run with `rabbitlock run --sandbox off -- <agent>`.
+2. Configure the agent's own sandbox to deny reads of `~/.rabbitlock/identity` and `~/.rabbitlock/ca/rabbitlock-ca.key`, and writes to `~/.rabbitlock`, `rabbitlock.agent.yaml`, `secrets.sops.json` and `.rabbitlock/`.
+
+## Tool compatibility
+
+| Tool | Works | Notes |
+| --- | --- | --- |
+| curl | Yes | Uses `CURL_CA_BUNDLE` |
+| git over HTTPS | Yes | Basic auth (`https://x-access-token:$TOKEN@github.com/...`) is supported |
+| Python (`requests`, `urllib`) | Yes | Uses `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` |
+| Node `fetch` | Node 22.21+ / 24.5+ | RabbitLock sets `NODE_USE_ENV_PROXY=1` |
+| Node `https` + proxy agents | Yes | Uses `NODE_EXTRA_CA_CERTS` |
+| Go tools on macOS (`gh`) | After `rabbitlock ca trust` | [Trust the CA on macOS](/guides/macos-ca-trust) |
+
+Full matrix: [Compatibility](/reference/compatibility).

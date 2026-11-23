@@ -1,0 +1,16 @@
+---
+title: Limits
+description: What RabbitLock does not do today. Kept current, and every limit is stated plainly.
+---
+
+| Limit | Impact | Workaround |
+| --- | --- | --- |
+| **Authorized misuse** | An agent can do anything a token allows on its allowed host | Narrowly scoped tokens; `approval: once` or `every` |
+| **No sandbox available** (Windows, Linux without `bubblewrap`, already-sandboxed environments) | The agent could read your key file | Install `bubblewrap`; use `--sandbox on` to refuse instead |
+| **Self-sandboxing agents other than Claude Code** | Can't be nested inside RabbitLock's sandbox on macOS | `--sandbox off` plus the agent's own sandbox rules |
+| **Responses are not scrubbed** | An allowed API that echoes the token back would show it to the agent | Avoid such endpoints; planned |
+| **Bodies over 1 MiB, compressed or multipart** | Not substituted, so they carry only the placeholder (the request fails safely) | Planned |
+| **HTTP/2-only clients, WebSockets** | Not intercepted | Planned |
+| **Local CA has no name constraints** | Anyone with the CA key could impersonate any site to programs that trust it | The sandbox denies the agent access to it; run `rabbitlock ca untrust` when you're done |
+| **Removing a recipient** | Doesn't revoke access to older ciphertext in git history | Rotate tokens when someone leaves |
+| **Approval dialog** | Logic is tested; the OS dialogs aren't covered by automated end-to-end tests yet | |

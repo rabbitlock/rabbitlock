@@ -1,0 +1,43 @@
+---
+title: Introduction
+description: RabbitLock lets your coding agent use your API keys without ever seeing them.
+---
+
+Coding agents run real commands (`curl`, `git push`, test suites, deploy scripts) with real credentials, and they read text they can't fully trust: issues, web pages, package READMEs. A token sitting in the agent's environment is one prompt injection, one `env` dump or one log line away from leaking.
+
+RabbitLock gives the agent **placeholders** instead of tokens. A local proxy swaps in the real credential **only on outbound HTTPS requests to hosts you allow**, and records a **receipt** for every use.
+
+```bash
+rabbitlock run -- claude
+```
+
+```text
+# inside the agent's shell
+$ echo $GITHUB_TOKEN
+rl_ph_GITHUB_TOKEN_9f3c…e71a          ← worthless on its own
+
+$ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
+200 OK                                 ← real token injected by RabbitLock
+```
+
+## What you get
+
+- **No real values in the agent.** The environment, context window, transcripts and logs only ever contain per-session placeholders.
+- **Per-secret host allowlists.** A token for `api.github.com` is never sent anywhere else.
+- **Human approval for the secrets that matter.** An OS dialog appears on first use, or on every use.
+- **Receipts.** Which secret, which host, which request, and the outcome. Never the value.
+- **An agent sandbox.** The agent can't read your keys or rewrite its own policy.
+- **No code changes.** It works with anything that honours standard proxy settings: curl, git, Node, Python, and the agents and MCP servers built on them.
+
+<Callout type="warn" title="What it does not do">
+RabbitLock controls **where** a token can go, not **what** it can do there. An agent with an allowed GitHub token can still do anything that token permits on GitHub. Use narrowly scoped tokens. See [Limits](/reference/limits).
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Quickstart" href="/quickstart" description="Install, store a secret and run your agent in five minutes." />
+  <Card title="How it works" href="/concepts/how-it-works" description="Placeholders, the proxy, and the six outcomes of every request." />
+  <Card title="Claude Code guide" href="/guides/claude-code" description="Run Claude Code with brokered credentials and its sandbox locked down." />
+  <Card title="Security" href="/security" description="What is protected, what is up to you, and what is not covered." />
+</Cards>

@@ -1,0 +1,48 @@
+---
+title: Policy file
+description: The rabbitlock.agent.yaml schema.
+---
+
+```yaml title="rabbitlock.agent.yaml"
+secrets_file: secrets.sops.json        # default
+receipts: .rabbitlock/receipts.jsonl   # default
+
+recipients:                            # public keys that can decrypt secrets_file
+  - 3f9a…
+
+secrets:
+  GITHUB_TOKEN:
+    hosts: [api.github.com, github.com]
+  STRIPE_API_KEY:
+    hosts: [api.stripe.com]
+    approval: once
+  INTERNAL_API_KEY:
+    hosts: ["*.internal.example.com"]
+    approval: every
+```
+
+## Fields
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `secrets_file` | path | `secrets.sops.json` | Relative to the policy file |
+| `receipts` | path | `.rabbitlock/receipts.jsonl` | Relative to the policy file |
+| `recipients` | list of hex public keys | `[]` | Your own key is always added on write |
+| `secrets` | map | `{}` | Only secrets listed here reach the agent |
+| `secrets.<NAME>.hosts` | list | required, non-empty | Exact host names, or one leading wildcard |
+| `secrets.<NAME>.approval` | `never` \| `once` \| `every` | `never` | See [Approvals](/guides/approvals) |
+
+## Host matching
+
+- Exact, case-insensitive: `api.github.com` matches only `api.github.com`.
+- Wildcard: `*.example.com` matches `a.example.com` and `a.b.example.com`, but **not** `example.com` itself, and not `evilexample.com`.
+- No schemes, paths or ports. `https://api.github.com/user` is rejected.
+
+## Validation
+
+Malformed entries are errors, never guesses. A typo must not silently widen or drop protection. RabbitLock refuses to run with:
+
+- a secret name that doesn't match `^[A-Z][A-Z0-9_]*$`
+- a missing or empty `hosts` list, or an invalid host entry
+- an `approval` value other than `never`, `once` or `every`
+- `recipients` entries that aren't hex strings

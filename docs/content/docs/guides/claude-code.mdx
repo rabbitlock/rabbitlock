@@ -1,0 +1,33 @@
+---
+title: Claude Code
+description: Run Claude Code with brokered credentials and its sandbox locked down around your keys.
+---
+
+```bash
+rabbitlock run -- claude
+```
+
+Any arguments after `claude` are passed through, for example `rabbitlock run -- claude --resume`.
+
+## What RabbitLock sets up
+
+1. **Placeholders** for every secret in your policy, in Claude Code's environment and therefore in every command it runs.
+2. **Proxy and CA variables** (`HTTPS_PROXY`, `NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE` and others). Claude Code and the tools it launches send HTTPS through the broker. Claude Code's own API traffic is tunneled through untouched, because it isn't an allowed host for any secret.
+3. **Claude Code's own sandbox, configured for the session.** Claude Code already sandboxes the commands it runs, and macOS cannot nest one sandbox inside another. So instead of wrapping Claude Code, RabbitLock passes it `--settings` that:
+   - turn the sandbox on, with `failIfUnavailable: true` and no unsandboxed fallback (`allowUnsandboxedCommands: false`)
+   - deny reads of your identity seed and the CA private key
+   - deny writes to `~/.rabbitlock`, the policy file, the encrypted secrets file and the receipts directory
+   - add matching `Read` and `Edit` deny rules for Claude Code's file tools
+
+The startup line shows `sandbox: claude-settings` when this is active.
+
+<Callout title="Verified">
+With Claude Code 2.1.330 and these settings, `cat` and a Python script reading the identity file were both refused, and so was a shell append to the policy file.
+</Callout>
+
+## Tips
+
+- **Scope your tokens.** RabbitLock limits where a token goes. A fine-grained GitHub token limits what it can do there.
+- **Gate the dangerous ones.** Put `approval: once` on deploy keys, payment keys and anything with write access to production.
+- **Prefer the identity file** over `RABBITLOCK_SEED_HEX`. An environment variable is visible to other processes running as you unless they are sandboxed.
+- **Opting out.** `rabbitlock run --sandbox off -- claude` skips the session settings. Do this only if you manage Claude Code's sandbox yourself.

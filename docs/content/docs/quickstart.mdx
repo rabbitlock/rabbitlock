@@ -1,0 +1,102 @@
+---
+title: Quickstart
+description: Install RabbitLock, store a secret, and run your coding agent with brokered credentials.
+---
+
+You need Node.js 20 or newer. For Node's built-in `fetch` to go through the proxy, the agent's tools need Node 22.21+ or 24.5+.
+
+<Steps>
+<Step>
+
+### Install
+
+```bash
+npm install -g @rabbitlock/cli
+```
+
+</Step>
+<Step>
+
+### Create your identity and policy
+
+Run this in the repository your agent works in:
+
+```bash
+rabbitlock init
+```
+
+This creates:
+
+- `~/.rabbitlock/identity`: your private key seed. Back it up and never commit it.
+- `~/.rabbitlock/ca/`: a local certificate authority, used to inspect requests to your allowed hosts.
+- `rabbitlock.agent.yaml`: your policy, with your public key as the first recipient. Commit it; it contains no secrets.
+
+Add `.rabbitlock/` to `.gitignore`. Receipts are written there.
+
+</Step>
+<Step>
+
+### Store a secret
+
+```bash
+echo -n "$GITHUB_TOKEN" | rabbitlock set GITHUB_TOKEN
+# or type it at a hidden prompt:
+rabbitlock set STRIPE_API_KEY
+```
+
+Values are encrypted into `secrets.sops.json`, which you commit too.
+
+</Step>
+<Step>
+
+### Say where each secret may go
+
+Edit `rabbitlock.agent.yaml`:
+
+```yaml title="rabbitlock.agent.yaml"
+secrets:
+  GITHUB_TOKEN:
+    hosts: [api.github.com, github.com]
+  STRIPE_API_KEY:
+    hosts: [api.stripe.com]
+    approval: once   # ask a human the first time it's used in a session
+```
+
+A secret that isn't listed here is never given to the agent.
+
+</Step>
+<Step>
+
+### Run your agent
+
+```bash
+rabbitlock run -- claude
+```
+
+The first line printed shows which secrets are brokered and which sandbox is active:
+
+```text
+rabbitlock: brokering 2 secret(s) [GITHUB_TOKEN, STRIPE_API_KEY] for `claude` (sandbox: claude-settings) via http://127.0.0.1:60775; receipts -> /path/to/repo/.rabbitlock/receipts.jsonl
+```
+
+</Step>
+<Step>
+
+### Check what was used
+
+```bash
+rabbitlock receipts
+```
+
+```text
+2026-11-23T15:55:08.586Z  injected         GITHUB_TOKEN             GET api.github.com/user -> 200
+```
+
+</Step>
+</Steps>
+
+## What next
+
+- On macOS, tools written in Go (such as `gh`) need the local CA trusted once: [Trust the CA on macOS](/guides/macos-ca-trust).
+- Share secrets with teammates: [Teams](/guides/teams).
+- Understand the guarantees: [How it works](/concepts/how-it-works) and [Security](/security).

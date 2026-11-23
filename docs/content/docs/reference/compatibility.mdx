@@ -1,0 +1,41 @@
+---
+title: Compatibility
+description: Platforms, agents, tools and protocols.
+---
+
+## Platforms
+
+| | macOS | Linux | Windows |
+| --- | --- | --- | --- |
+| Broker and proxy | Yes | Yes | Untested |
+| Agent sandbox | `sandbox-exec` | `bwrap` (install `bubblewrap`) | No |
+| Approval dialog | Yes | `zenity` if installed | No (denies) |
+
+Node.js 20 or newer is required.
+
+## Agents
+
+| Agent | Status |
+| --- | --- |
+| Claude Code | Verified live, with its own sandbox configured automatically |
+| Agents that sandbox themselves with Seatbelt on macOS (Codex CLI) | Use `--sandbox off` and configure the agent's sandbox; see [Other agents](/guides/other-agents) |
+| Other agents and plain shells | Should work where their tools honour proxy settings; untested |
+
+## Tools
+
+| Tool | Status |
+| --- | --- |
+| curl | Tested |
+| git over HTTPS (including Basic auth) | Tested; verified with a real GitHub token |
+| Node `fetch` | Tested; needs Node 22.21+ or 24.5+ |
+| Python `requests` / `urllib` | Expected to work via `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE`; untested |
+| Go tools on macOS (`gh`) | Needs [`rabbitlock ca trust`](/guides/macos-ca-trust) |
+
+## Protocols
+
+| | Status |
+| --- | --- |
+| HTTPS over HTTP/1.1 | Supported |
+| Plain HTTP | Forwarded, never injected |
+| HTTP/2-only clients | Not intercepted |
+| WebSockets | Not intercepted |

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc" fill="none">
+  <title id="title">RabbitLock logomark</title>
+  <desc id="desc">Rabbit ears merged with a secure lock body and keyhole.</desc>
+  <defs>
+    <linearGradient id="bodyGradient" x1="16" y1="18" x2="48" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#0A0F1F"/>
+    </linearGradient>
+    <linearGradient id="earGradient" x1="16" y1="4" x2="32" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C8CFF"/>
+      <stop offset="1" stop-color="#5CF0FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="4" width="10" height="26" rx="5" fill="url(#earGradient)" stroke="#5CF0FF" stroke-width="2"/>
+  <rect x="38" y="4" width="10" height="26" rx="5" fill="url(#earGradient)" stroke="#5CF0FF" stroke-width="2"/>
+  <rect x="10" y="20" width="44" height="34" rx="11" fill="url(#bodyGradient)" stroke="#5CF0FF" stroke-width="2"/>
+  <path d="M32 30c-3.3 0-6 2.7-6 6 0 2.3 1.2 4.3 3 5.3V44a3 3 0 1 0 6 0v-2.7c1.8-1 3-3 3-5.3 0-3.3-2.7-6-6-6Z" fill="#5CF0FF"/>
+</svg>

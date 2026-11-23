@@ -1,0 +1,27 @@
+---
+title: Receipts
+description: A record of every use of every secret, with nothing worth stealing in it.
+---
+
+Every injection, block and denial is appended to a JSON Lines file, `.rabbitlock/receipts.jsonl` by default:
+
+```json
+{"ts":"2026-11-23T15:55:08.586Z","session":"8a1f…","secrets":["GITHUB_TOKEN"],"host":"api.github.com","method":"GET","path":"/user","decision":"injected","status":200}
+```
+
+- **Never the value.** As a second safety net, any real value that somehow reached a receipt line would be replaced with `[REDACTED]` before writing.
+- **No query strings.** Paths are recorded without them.
+- **Tamper-resistant during a session.** The sandboxed agent can't write to the receipts directory.
+
+Read them with:
+
+```bash
+rabbitlock receipts            # last 20
+rabbitlock receipts --tail 200
+```
+
+Field-by-field reference: [Receipt format](/reference/receipt-format).
+
+<Callout>
+Receipts are local and per developer today. Central receipts across a team are part of the hosted product on the roadmap.
+</Callout>

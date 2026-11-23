@@ -1,0 +1,48 @@
+---
+title: Teams
+description: Share encrypted secrets with teammates through git.
+---
+
+Secrets are encrypted to a list of **recipients**, each identified by a public key. Anyone listed can decrypt; nobody else can.
+
+<Steps>
+<Step>
+
+### Each teammate runs `rabbitlock init`
+
+It prints their public key. A public key is safe to share.
+
+</Step>
+<Step>
+
+### Add their keys to the policy
+
+```yaml title="rabbitlock.agent.yaml"
+recipients:
+  - 3f9a…   # you
+  - 8c21…   # teammate
+```
+
+</Step>
+<Step>
+
+### Re-encrypt
+
+Any `rabbitlock set` re-encrypts the whole file for everyone listed. Your own key is always included.
+
+```bash
+echo -n "$GITHUB_TOKEN" | rabbitlock set GITHUB_TOKEN
+```
+
+Commit `rabbitlock.agent.yaml` and `secrets.sops.json`.
+
+</Step>
+</Steps>
+
+## Removing someone
+
+Remove their key and re-encrypt. They can still decrypt **older versions** of `secrets.sops.json` from git history, so **rotate the underlying tokens** whenever someone leaves.
+
+## Policy changes are code changes
+
+`rabbitlock.agent.yaml` decides where each secret may go. Review changes to it like code, especially new hosts. During a session the agent can't modify it: the [sandbox](/concepts/sandbox) makes it read-only.

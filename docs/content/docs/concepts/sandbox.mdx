@@ -1,0 +1,43 @@
+---
+title: Agent sandbox
+description: Why the agent runs isolated from your keys and policy, and how that works on each platform.
+---
+
+Placeholders only help if the agent can't simply read the key that decrypts everything, or quietly widen its own policy for next time. So `rabbitlock run` launches the agent in a sandbox by default.
+
+## What the agent is denied
+
+| Path | Denied |
+| --- | --- |
+| `~/.rabbitlock/identity` (your private key seed) | read |
+| `~/.rabbitlock/ca/rabbitlock-ca.key` (local CA private key) | read |
+| everything under `~/.rabbitlock` | write |
+| the policy file, the encrypted secrets file, the receipts directory | write |
+| other processes' information, when the seed came from `RABBITLOCK_SEED_HEX` | inspect |
+
+The public CA certificate stays readable, because tools need it to verify TLS.
+
+The last row closes a real leak. On macOS and Linux, a process running as you can normally read another process's environment (for example with `ps -E`). That would expose `RABBITLOCK_SEED_HEX` from the broker. The identity file avoids the issue entirely, so prefer it.
+
+## How, per platform
+
+| Agent / platform | Mechanism | Startup line |
+| --- | --- | --- |
+| `claude` | Claude Code's own sandbox, configured with `--settings` (see [Claude Code](/guides/claude-code)) | `claude-settings` |
+| macOS | `sandbox-exec` (Seatbelt) profile | `seatbelt` |
+| Linux | `bwrap` with a private PID namespace when hiding processes | `bwrap` |
+| Windows | none | `unavailable` |
+
+Before launching, RabbitLock does a **preflight**. It tries the sandbox on a no-op command. If that fails, for example because RabbitLock is itself running inside a sandbox, the sandbox is treated as unavailable.
+
+## Modes
+
+```bash
+rabbitlock run --sandbox auto -- …   # default: sandbox if possible, warn and continue if not
+rabbitlock run --sandbox on   -- …   # refuse to start without a sandbox
+rabbitlock run --sandbox off  -- …   # no sandbox (you provide isolation yourself)
+```
+
+<Callout title="Tested">
+Automated tests on macOS and Linux confirm that, inside the sandbox, the agent can't read the identity file or the CA key, can't append to the policy, can't forge receipts, and can't read the broker's environment. It can still read the public CA certificate.
+</Callout>

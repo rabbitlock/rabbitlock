@@ -1,0 +1,33 @@
+---
+title: Environment variables
+description: Variables RabbitLock reads, sets for the agent, and removes.
+---
+
+## Read by RabbitLock
+
+| Variable | Purpose |
+| --- | --- |
+| `RABBITLOCK_HOME` | Directory for the identity and local CA. Default `~/.rabbitlock`. |
+| `RABBITLOCK_SEED_HEX` | Identity seed (64 hex characters) instead of the identity file. Intended for automation. When it's set, the sandbox also hides other processes. |
+| `RABBITLOCK_APPROVER` | `allow` or `deny` answers approval prompts without a dialog |
+
+## Set for the agent
+
+| Variable | Value |
+| --- | --- |
+| each secret named in the policy | its per-session placeholder |
+| `HTTPS_PROXY`, `https_proxy`, `HTTP_PROXY`, `http_proxy` | `http://127.0.0.1:<port>` |
+| `NODE_USE_ENV_PROXY` | `1` |
+| `NODE_EXTRA_CA_CERTS` | local CA certificate |
+| `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO` | bundle of system roots plus the local CA |
+| `RABBITLOCK_ACTIVE` | `1` |
+| `RABBITLOCK_SESSION` | session id (also recorded in receipts) |
+
+## Removed from the agent
+
+- every other `RABBITLOCK_*` variable
+- any variable whose value equals a real secret value, whatever its name
+
+## Test only
+
+`RABBITLOCK_TEST_UPSTREAM` and `RABBITLOCK_TEST_UPSTREAM_CA` route intercepted hosts to a local test server. They exist for RabbitLock's own test suite. Don't set them in normal use.

@@ -1,0 +1,24 @@
+---
+title: Changelog
+description: Releases and what's planned next.
+---
+
+## Unreleased: 0.1.0
+
+First public release of the `rabbitlock` CLI.
+
+- Placeholders for secrets, swapped in only on outbound HTTPS to per-secret allowed hosts
+- Injection into headers (including Basic auth), URLs, and JSON, form and text bodies up to 1 MiB
+- Human approvals (`once`, `every`) through OS dialogs
+- Receipts in `.rabbitlock/receipts.jsonl`, never containing values
+- Agent sandbox by default: `sandbox-exec` on macOS, `bwrap` on Linux, Claude Code's own sandbox for `claude`
+- Encrypted secrets in git (SOPS format, hybrid X25519 + ML-KEM-768 recipients), shareable with teammates
+- `rabbitlock ca trust` for Go tools on macOS
+
+## Planned
+
+- Response scrubbing for allowed hosts
+- Reading secrets from existing vaults (1Password, HashiCorp Vault, AWS Secrets Manager)
+- HTTP/2 and WebSocket interception
+- CI and background agents with credentials delivered to verified workloads
+- Team features in the hosted product: shared policy, central receipts, approvals on Slack or mobile

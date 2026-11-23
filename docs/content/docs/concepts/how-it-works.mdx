@@ -1,0 +1,60 @@
+---
+title: How it works
+description: Placeholders, the local proxy, and the six outcomes of every request.
+---
+
+## The flow
+
+`rabbitlock run -- <agent>` does this before the agent starts:
+
+1. **Loads the policy** (`rabbitlock.agent.yaml`). RabbitLock looks in the current directory and then each parent directory.
+2. **Decrypts the secrets file** inside RabbitLock's own process, using your identity. If the file's integrity check fails, the run stops.
+3. **Creates a placeholder** for each secret named in the policy: `rl_ph_<NAME>_<128-bit random>`, new every session.
+4. **Starts a proxy** on `127.0.0.1` at a random port.
+5. **Launches the agent** in a [sandbox](/concepts/sandbox), with placeholders and proxy settings in its environment, and without any real value or RabbitLock key material.
+
+```text
+  agent  ──(placeholder)──▶  RabbitLock proxy  ──(real token)──▶  api.github.com
+                                    │
+                                    ├─ is this secret allowed on this host?
+                                    ├─ does a human need to approve?
+                                    └─ write a receipt (never the value)
+```
+
+## Placeholders
+
+Tools pass the placeholder around exactly as they would the real token. RabbitLock finds it in:
+
+- request **headers**, including inside `Authorization: Basic` credentials (git over HTTPS)
+- the **URL**, including query strings (the value is percent-encoded)
+- **request bodies**: JSON (`application/json`, `*+json`), form (`application/x-www-form-urlencoded`) and `text/*`. The body must be at most 1 MiB and uncompressed. Each value is escaped for its format (JSON string escaping, URL encoding), and `Content-Length` is recomputed.
+
+Larger, compressed or multipart bodies pass through untouched, so they can only carry the placeholder.
+
+## The six outcomes
+
+For hosts listed in your policy, RabbitLock terminates TLS with a certificate from its local CA, inspects the request, and re-sends it upstream over normally verified TLS. Every request ends one of these ways:
+
+| Request | Result | Receipt |
+| --- | --- | --- |
+| Placeholder for a secret allowed on this host, approval passes | Real value swapped in, forwarded | `injected` |
+| Placeholder for a secret **not** allowed on this host | `403`; never leaves your machine | `blocked_host` |
+| Approval required and denied, timed out or unavailable | `403`; never leaves your machine | `denied_approval` |
+| Placeholder sent over plain HTTP | `403`; secrets are never injected over cleartext | `blocked_insecure` |
+| Host not in your policy | Tunneled untouched; it can only carry placeholders | none |
+| No placeholder in the request | Forwarded unchanged | none |
+
+The destination used for both the policy check and the upstream connection is the host the agent actually connected to (the `CONNECT` target). A forged `Host` header can't redirect a secret.
+
+## What the agent's environment contains
+
+| Variable | Value |
+| --- | --- |
+| Each secret named in the policy | its placeholder |
+| `HTTPS_PROXY`, `HTTP_PROXY` (and lowercase) | the broker |
+| `NODE_USE_ENV_PROXY` | `1` |
+| `NODE_EXTRA_CA_CERTS` | the local CA certificate |
+| `SSL_CERT_FILE`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO` | system roots plus the local CA |
+| `RABBITLOCK_ACTIVE`, `RABBITLOCK_SESSION` | `1` and the session id |
+
+Removed before launch: every other `RABBITLOCK_*` variable (including `RABBITLOCK_SEED_HEX`), and any variable whose value equals a real secret, whatever its name.

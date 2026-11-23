@@ -1,0 +1,32 @@
+---
+title: Receipt format
+description: Fields and decisions in .rabbitlock/receipts.jsonl.
+---
+
+One JSON object per line.
+
+## Fields
+
+| Field | Present on | Meaning |
+| --- | --- | --- |
+| `ts` | all | ISO 8601 timestamp |
+| `session` | all | session id; the same as `RABBITLOCK_SESSION` |
+| `decision` | all | see below |
+| `secrets` | request decisions, `session_start` | names involved; never values |
+| `host`, `method`, `path` | request decisions | destination host, HTTP method, path without query string |
+| `status` | `injected` | upstream HTTP status |
+| `blocked` | `blocked_host`, `denied_approval` | which secrets caused the block |
+| `error` | `upstream_error` | network error code |
+| `command`, `sandbox` | `session_start` | the launched command and the sandbox in use |
+| `exitCode` | `session_end` | the agent's exit code |
+
+## Decisions
+
+| Decision | Meaning |
+| --- | --- |
+| `session_start` / `session_end` | a `rabbitlock run` began or finished |
+| `injected` | real value(s) swapped in and the request was forwarded |
+| `blocked_host` | a secret's placeholder was sent to a host not allowed for it; `403` |
+| `blocked_insecure` | a placeholder was sent over plain HTTP; `403` |
+| `denied_approval` | a required approval was denied, timed out or unavailable; `403` |
+| `upstream_error` | injection was allowed, but the upstream connection failed |
