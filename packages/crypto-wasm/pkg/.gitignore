@@ -1,0 +1,1 @@
+# Prebuilt artifacts are committed so the CLI works without a Rust toolchain.

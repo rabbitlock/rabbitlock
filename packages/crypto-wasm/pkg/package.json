@@ -1,0 +1,21 @@
+{
+  "name": "rabbitlock-crypto",
+  "type": "module",
+  "description": "RabbitLock crypto core compiled to WebAssembly.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rabbitlock/rabbitlock"
+  },
+  "files": [
+    "rabbitlock_crypto_bg.wasm",
+    "rabbitlock_crypto.js",
+    "rabbitlock_crypto.d.ts"
+  ],
+  "main": "rabbitlock_crypto.js",
+  "types": "rabbitlock_crypto.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
