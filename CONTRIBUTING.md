@@ -6,7 +6,7 @@ Thanks for helping. A few things to know first.
 
 Every contributor must agree to the [CLA](CLA.md) before a pull request can be merged. The CLA bot comments on your first pull request; reply with the sentence it asks for. You only sign once.
 
-Why: the CLA lets RabbitLock Inc. keep distributing the project, including under other licenses (for example, in the commercial hosted product). You keep the copyright to your contribution.
+Why: the CLA lets Rabbitlock Inc. keep distributing the project, including under other licenses (for example, in the commercial hosted product). You keep the copyright to your contribution.
 
 ## Development
 

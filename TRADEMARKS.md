@@ -1,6 +1,6 @@
 # RabbitLock trademark policy
 
-"RabbitLock", the RabbitLock wordmark and logo, and related brand assets are trademarks of RabbitLock Inc.
+"RabbitLock", the RabbitLock wordmark and logo, and related brand assets are trademarks of Rabbitlock Inc.
 
 The code in this repository is licensed under Apache-2.0. That license does not grant trademark rights (Apache-2.0, section 6).
 
