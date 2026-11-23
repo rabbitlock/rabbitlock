@@ -33,6 +33,15 @@ const run = () => {
     const result = spawnSync("wasm-pack", ["build", "--target", "web"], {
       stdio: "inherit",
     });
+    if (result.status === 0) {
+      // wasm-pack writes pkg/.gitignore containing "*", which would untrack the committed
+      // artifacts the CLI depends on. Restore ours, and keep the Apache-2.0 metadata.
+      fs.writeFileSync(
+        path.join(pkgPath, ".gitignore"),
+        "# Prebuilt artifacts are committed so the CLI works without a Rust toolchain.\n",
+      );
+      fs.copyFileSync(path.resolve(pkgDir.pathname, "LICENSE"), path.join(pkgPath, "LICENSE"));
+    }
     process.exit(result.status ?? 1);
   }
 

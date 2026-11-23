@@ -5,7 +5,7 @@ export function create_zip_archive(files_js: any): Uint8Array;
 
 export function decrypt_and_verify_sops(json_input: string, private_key: string): string;
 
-export function decrypt_binary_hybrid(data: Uint8Array, secret_key_hex: string): Uint8Array;
+export function decrypt_binary_hybrid(data: Uint8Array | number[], secret_key_hex: string): Uint8Array;
 
 export function decrypt_data_key(json_input: string, private_key: string): string;
 
@@ -17,7 +17,7 @@ export function decrypt_sops_content(json_input: string, private_key: string): s
 
 export function derive_hybrid_keypair(seed_hex: string): string;
 
-export function encrypt_binary_hybrid(data: Uint8Array, recipient_pubkey_hex: string): Uint8Array;
+export function encrypt_binary_hybrid(data: Uint8Array | number[], recipient_pubkey_hex: string): Uint8Array;
 
 export function encrypt_data_key(data_key_hex: string, recipient_pubkey_hex: string): string;
 
@@ -100,58 +100,59 @@ export function verify_sops_integrity(json_input: string, data_key_hex: string):
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
-  readonly memory: WebAssembly.Memory;
-  readonly decrypt_and_verify_sops: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly decrypt_data_key: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly decrypt_sops_content: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly derive_hybrid_keypair: (a: number, b: number) => [number, number, number, number];
-  readonly encrypt_data_key: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly encrypt_sops_json: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly encrypt_sops_json_for_recipient: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly encrypt_sops_json_for_recipients: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly greet: (a: number, b: number) => [number, number];
-  readonly parse_and_verify_sops: (a: number, b: number) => [number, number];
-  readonly pq_decapsulate: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly pq_encapsulate: (a: number, b: number) => [number, number, number, number];
-  readonly pq_generate_keypair: () => [number, number];
-  readonly pq_get_sizes: () => [number, number];
-  readonly pq_mlkem_decapsulate: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly pq_mlkem_encapsulate: (a: number, b: number) => [number, number, number, number];
-  readonly pq_mlkem_generate_keypair: () => [number, number];
-  readonly sss_recover_secret: (a: any, b: number) => [number, number, number, number];
-  readonly sss_split_secret: (a: number, b: number, c: number, d: number) => [number, number, number];
-  readonly verify_sops_integrity: (a: number, b: number, c: number, d: number) => [number, number];
-  readonly create_zip_archive: (a: any) => [number, number, number, number];
-  readonly decrypt_binary_hybrid: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly encrypt_binary_hybrid: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-  readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_exn_store: (a: number) => void;
-  readonly __externref_table_alloc: () => number;
-  readonly __wbindgen_externrefs: WebAssembly.Table;
-  readonly __externref_table_dealloc: (a: number) => void;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_start: () => void;
+    readonly memory: WebAssembly.Memory;
+    readonly create_zip_archive: (a: any) => [number, number, number, number];
+    readonly decrypt_and_verify_sops: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly decrypt_binary_hybrid: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly decrypt_data_key: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly decrypt_sops_content: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly derive_hybrid_keypair: (a: number, b: number) => [number, number, number, number];
+    readonly encrypt_binary_hybrid: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly encrypt_data_key: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly encrypt_sops_json: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly encrypt_sops_json_for_recipient: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly encrypt_sops_json_for_recipients: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly greet: (a: number, b: number) => [number, number];
+    readonly parse_and_verify_sops: (a: number, b: number) => [number, number];
+    readonly pq_decapsulate: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly pq_encapsulate: (a: number, b: number) => [number, number, number, number];
+    readonly pq_generate_keypair: () => [number, number];
+    readonly pq_get_sizes: () => [number, number];
+    readonly pq_mlkem_decapsulate: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly pq_mlkem_encapsulate: (a: number, b: number) => [number, number, number, number];
+    readonly pq_mlkem_generate_keypair: () => [number, number];
+    readonly sss_recover_secret: (a: any, b: number) => [number, number, number, number];
+    readonly sss_split_secret: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly verify_sops_integrity: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly __wbindgen_malloc: (a: number, b: number) => number;
+    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __wbindgen_exn_store: (a: number) => void;
+    readonly __externref_table_alloc: () => number;
+    readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __externref_table_dealloc: (a: number) => void;
+    readonly __externref_drop_slice: (a: number, b: number) => void;
+    readonly __wbindgen_start: () => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
 
 /**
-* Instantiates the given `module`, which can either be bytes or
-* a precompiled `WebAssembly.Module`.
-*
-* @param {{ module: SyncInitInput }} module - Passing `SyncInitInput` directly is deprecated.
-*
-* @returns {InitOutput}
-*/
+ * Instantiates the given `module`, which can either be bytes or
+ * a precompiled `WebAssembly.Module`.
+ *
+ * @param {{ module: SyncInitInput }} module - Passing `SyncInitInput` directly is deprecated.
+ *
+ * @returns {InitOutput}
+ */
 export function initSync(module: { module: SyncInitInput } | SyncInitInput): InitOutput;
 
 /**
-* If `module_or_path` is {RequestInfo} or {URL}, makes a request and
-* for everything else, calls `WebAssembly.instantiate` directly.
-*
-* @param {{ module_or_path: InitInput | Promise<InitInput> }} module_or_path - Passing `InitInput` directly is deprecated.
-*
-* @returns {Promise<InitOutput>}
-*/
+ * If `module_or_path` is {RequestInfo} or {URL}, makes a request and
+ * for everything else, calls `WebAssembly.instantiate` directly.
+ *
+ * @param {{ module_or_path: InitInput | Promise<InitInput> }} module_or_path - Passing `InitInput` directly is deprecated.
+ *
+ * @returns {Promise<InitOutput>}
+ */
 export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;
