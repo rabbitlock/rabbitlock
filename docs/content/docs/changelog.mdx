@@ -3,6 +3,11 @@ title: Changelog
 description: Releases and what's planned next.
 ---
 
+## 0.4.2 (2026-11-24)
+
+- New positioning: RabbitLock is one credential policy, approval and receipt layer for every coding agent. The CLI's help text and package description say so. No behaviour changes.
+- Public [roadmap](/roadmap).
+
 ## 0.4.1 (2026-11-24)
 
 - **The local CA private key is encrypted at rest**, under a key derived from your identity (HKDF-SHA256, then AES-256-GCM). With `rabbitlock key protect`, the one passphrase now covers both keys, with no extra prompt. A plain-text key from an earlier version is encrypted on your next `rabbitlock run`.
@@ -46,8 +51,4 @@ First public release of the `rabbitlock` CLI.
 
 ## Planned
 
-- Response scrubbing for allowed hosts
-- Reading secrets from existing vaults (1Password, HashiCorp Vault, AWS Secrets Manager)
-- HTTP/2 and WebSocket interception
-- CI and background agents with credentials delivered to verified workloads
-- Team features in the hosted product: shared policy, central receipts, approvals on Slack or mobile
+See the [roadmap](/roadmap).

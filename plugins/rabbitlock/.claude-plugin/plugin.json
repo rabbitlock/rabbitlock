@@ -1,6 +1,6 @@
 {
   "name": "rabbitlock",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Set up RabbitLock in a project: install the CLI, propose a credential policy, and hand secret entry to the user.",
   "author": {
     "name": "Rabbitlock Inc.",

@@ -1,11 +1,13 @@
 ---
 title: Introduction
-description: RabbitLock lets your coding agent use your API keys without ever seeing them.
+description: One credential policy for every coding agent. Where each key may go, which uses need your approval, and a receipt of every use.
 ---
 
-Coding agents run real commands (`curl`, `git push`, test suites, deploy scripts) with real credentials, and they read text they can't fully trust: issues, web pages, package READMEs. A token sitting in the agent's environment is one prompt injection, one `env` dump or one log line away from leaking.
+Coding agents run real commands (`curl`, `git push`, test suites, deploy scripts) with real credentials, and they read text they can't fully trust: issues, web pages, package READMEs. A token sitting in the agent's environment is one prompt injection, one `env` dump or one log line away from leaking. And each agent platform handles credentials its own way, or not at all.
 
-RabbitLock gives the agent **placeholders** instead of tokens. A local proxy swaps in the real credential **only on outbound HTTPS requests to hosts you allow**, and records a **receipt** for every use.
+RabbitLock is **one policy** for all of them: which hosts each key may reach, and which uses need your **approval**. Every use leaves a **receipt**. The agent only ever holds **placeholders**.
+
+Today RabbitLock enforces the policy with its own local proxy, which swaps in the real credential only on outbound HTTPS requests to allowed hosts. Applying the same policy through each platform's built-in credential features is on the [roadmap](/roadmap).
 
 ```bash
 rabbitlock run -- claude
@@ -37,8 +39,8 @@ RabbitLock controls **where** a token can go, not **what** it can do there. An a
 
 <Cards>
   <Card title="Individual" href="/quickstart" description="Free and open source. Your agents, your keys, on your machine. Five minutes, or let your agent set it up." />
-  <Card title="Team" href="/guides/teams" description="Share encrypted secrets with teammates through git today; hosted shared policy and receipts in early access." />
-  <Card title="Enterprise" href="https://rabbitlock.com/plans" description="SSO, CI and background agents, org-wide policy and audit export. In development: talk to us." />
+  <Card title="Team" href="/guides/teams" description="Share encrypted secrets and one policy with teammates through git. Signed receipts and team approvals are on the roadmap." />
+  <Card title="Enterprise" href="https://rabbitlock.com/plans" description="Org-wide policy, central evidence, keys from your vault or KMS, SSO. In development: talk to us." />
 </Cards>
 
 ## Next steps

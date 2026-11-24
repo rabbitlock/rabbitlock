@@ -32,10 +32,11 @@ import { createReceiptWriter, readReceipts } from "../src/receipts.mjs";
 import { runBrokered } from "../src/run.mjs";
 import { SANDBOX_MODES } from "../src/sandbox.mjs";
 
-const HELP = `rabbitlock - credential broker for coding agents
+const HELP = `rabbitlock - one credential policy for every coding agent
 
-The agent gets placeholders. RabbitLock swaps in real credentials only on
-outbound HTTPS requests to hosts your policy allows, and records a receipt.
+One policy says which hosts each key may reach and which uses need approval.
+The agent gets placeholders; RabbitLock swaps in real credentials only on
+outbound HTTPS requests to allowed hosts, and records a receipt of every use.
 
 Usage:
   rabbitlock init [--agents-md]       Create your identity and ${POLICY_FILENAME}
