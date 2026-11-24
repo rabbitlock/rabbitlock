@@ -26,4 +26,6 @@ jobs:
           path-to-signatures: "signatures/cla.json"
           path-to-document: "https://github.com/rabbitlock/rabbitlock/blob/main/CLA.md"
           branch: "cla-signatures"
-          allowlist: "Rishirandhawa,dependabot[bot],github-actions[bot]"
+          # "claude" appears as a co-author on maintainer commits made with Claude Code. Outside
+          # contributors still have to sign, whatever tools they use.
+          allowlist: "Rishirandhawa,claude,dependabot[bot],github-actions[bot]"
