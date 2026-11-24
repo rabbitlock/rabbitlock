@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 
-import { loadLocalCA } from "../src/ca.mjs";
+import { loadLocalCA, localCACertificate } from "../src/ca.mjs";
 import {
   MIN_PASSPHRASE_LENGTH,
   createIdentity,
@@ -12,6 +12,7 @@ import {
   keypairFromSeed,
   loadPublicKey,
   loadSeed,
+  loadSeedIfUnlocked,
   protectSeed,
   readIdentity,
   readSecretNames,
@@ -143,14 +144,16 @@ async function main(argv) {
     case "init": {
       const agentsMd = takeBool(args, "--agents-md");
       const { created } = createIdentity();
-      const ca = loadLocalCA();
+      // Create (or migrate) the CA now if the key is available without a prompt; otherwise on first `run`.
+      const unlocked = loadSeedIfUnlocked();
+      const ca = unlocked ? loadLocalCA(unlocked) : localCACertificate();
       console.log(created ? `Created identity at ${identityPath()}` : `Using existing identity at ${identityPath()}`);
       const target = path.resolve(policyPath ?? POLICY_FILENAME);
       if (!fs.existsSync(target)) {
         fs.writeFileSync(target, examplePolicy());
         console.log(`Wrote ${target} (safe to commit; your encrypted secrets stay in ${path.join(rabbitlockHome(), "projects")})`);
       }
-      console.log(`Local CA: ${ca.certPath}`);
+      console.log(ca ? `Local CA: ${ca.certPath}` : "Local CA: created on your first `rabbitlock run`.");
       if (agentsMd) {
         const dir = path.dirname(target);
         const result = upsertAgentsBlock(path.join(dir, "AGENTS.md"), AGENTS_BLOCK);
@@ -411,7 +414,7 @@ async function main(argv) {
     }
 
     case "ca": {
-      const ca = loadLocalCA();
+      const ca = localCACertificate() ?? loadLocalCA(await loadSeed());
       const sub = args.shift();
       if (!sub) {
         console.log(ca.certPath);

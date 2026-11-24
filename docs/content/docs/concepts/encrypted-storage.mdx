@@ -36,7 +36,7 @@ By default the identity file is protected by file permissions alone. Any program
 rabbitlock key protect
 ```
 
-This encrypts the seed with your passphrase, using scrypt (about 128 MiB of memory per guess) and AES-256-GCM. A copy of the file is then useless without the passphrase. RabbitLock asks for it on your terminal when it needs your private key: when you start `rabbitlock run`, and for `set`, `import`, `rm` and team changes. The agent never sees the prompt. It runs before the agent starts, and the agent's environment never contains the passphrase.
+This encrypts the seed with your passphrase, using scrypt (about 128 MiB of memory per guess) and AES-256-GCM. A copy of the file is then useless without the passphrase. The local CA's private key is always stored encrypted under a key derived from your identity, so the passphrase protects it too, without a second prompt. RabbitLock asks for it on your terminal when it needs your private key: when you start `rabbitlock run`, and for `set`, `import`, `rm` and team changes. The agent never sees the prompt. It runs before the agent starts, and the agent's environment never contains the passphrase.
 
 What it doesn't change: while `rabbitlock run` is running, the unlocked key and the decrypted secrets are in RabbitLock's memory. Use the passphrase together with the sandbox, not instead of it.
 

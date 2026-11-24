@@ -3,6 +3,12 @@ title: Changelog
 description: Releases and what's planned next.
 ---
 
+## 0.4.1 (2026-11-24)
+
+- **The local CA private key is encrypted at rest**, under a key derived from your identity (HKDF-SHA256, then AES-256-GCM). With `rabbitlock key protect`, the one passphrase now covers both keys, with no extra prompt. A plain-text key from an earlier version is encrypted on your next `rabbitlock run`.
+- `rabbitlock ca`, `ca trust` and `ca untrust` no longer need the private key.
+- With a passphrase-protected identity, `rabbitlock init` doesn't prompt; the CA is created on the first `rabbitlock run`.
+
 ## 0.4.0 (2026-11-24)
 
 - **Individual mode by default.** `rabbitlock init` writes a `project` id. Encrypted secrets and receipts live in `~/.rabbitlock/projects/<project>/`, outside the repo, so there's nothing to gitignore and nothing to decide about committing. Existing policies keep working unchanged.

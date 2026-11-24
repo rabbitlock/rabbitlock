@@ -100,3 +100,59 @@ test("CLI: key protect, use without a terminal, status/ls/key without the passph
   assert.equal(fs.readFileSync(idFile, "utf8").trim(), plainSeed, "the same identity comes back");
   assert.equal(mode(idFile), 0o600);
 });
+
+test("local CA key: sealed at rest, legacy PEM migrated on run, wrong identity refused, created on first run when locked", async () => {
+  const { createCertificateAuthority, loadLocalCA, openCAKey, sealCAKey } = await import("../src/ca.mjs");
+  const seedA = "11".repeat(32);
+  const seedB = "22".repeat(32);
+  const ca = createCertificateAuthority("test");
+  const sealed = sealCAKey(ca.keyPem, ca.certPem, seedA);
+  assert.ok(!JSON.stringify(sealed).includes("PRIVATE KEY"));
+  assert.equal(openCAKey(sealed, ca.certPem, seedA), ca.keyPem);
+  assert.throws(() => openCAKey(sealed, ca.certPem, seedB), /different identity/);
+  assert.throws(() => openCAKey(sealed, createCertificateAuthority("other").certPem, seedA), /certificate was replaced/);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rl-ca-"));
+  const home = path.join(dir, "home");
+  const env = { PATH: process.env.PATH, RABBITLOCK_HOME: home };
+
+  // init (unlocked identity) creates the CA with an encrypted key.
+  assert.equal((await runCli(["init"], { cwd: dir, env })).code, 0);
+  const keyFile = path.join(home, "ca", "rabbitlock-ca.key");
+  const certFile = path.join(home, "ca", "rabbitlock-ca.pem");
+  assert.ok(!fs.readFileSync(keyFile, "utf8").includes("PRIVATE KEY"), "CA key is not stored in clear");
+  assert.equal(mode(keyFile), 0o600);
+  assert.equal((await runCli(["ca"], { cwd: dir, env })).stdout.trim(), certFile, "`ca` needs no key");
+
+  // An older version's plain PEM key is encrypted in place on the next run, and the CA keeps working.
+  const seed = fs.readFileSync(path.join(home, "identity"), "utf8").trim();
+  const prev = process.env.RABBITLOCK_HOME;
+  process.env.RABBITLOCK_HOME = home;
+  try {
+    const loaded = loadLocalCA(seed);
+    fs.writeFileSync(keyFile, loaded.keyPem, { mode: 0o600 });
+    const policyFile = path.join(dir, "rabbitlock.agent.yaml");
+    fs.writeFileSync(policyFile, fs.readFileSync(policyFile, "utf8").replace(/^secrets: \{\}$/m, "secrets:\n  T:\n    hosts: [api.example.com]"));
+    assert.equal((await runCli(["set", "T"], { cwd: dir, env, input: "t-value-123456" })).code, 0);
+    const run = await runCli(["run", "--sandbox", "off", "--quiet", "--", process.execPath, "-e", "0"], { cwd: dir, env });
+    assert.equal(run.code, 0, run.stderr);
+    assert.match(run.stderr, /encrypted the local CA key at rest/);
+    assert.ok(!fs.readFileSync(keyFile, "utf8").includes("PRIVATE KEY"));
+    assert.equal(loadLocalCA(seed).keyPem, loaded.keyPem, "same CA key after migration");
+    assert.throws(() => loadLocalCA(seedB), /different identity/);
+  } finally {
+    if (prev === undefined) delete process.env.RABBITLOCK_HOME;
+    else process.env.RABBITLOCK_HOME = prev;
+  }
+
+  // Protected identity, no CA yet: init doesn't prompt and defers the CA to the first run.
+  assert.equal((await runCli(["key", "protect"], { cwd: dir, env, input: PASS })).code, 0);
+  fs.rmSync(path.join(home, "ca"), { recursive: true });
+  const init = await runCli(["init"], { cwd: dir, env });
+  assert.equal(init.code, 0, init.stderr);
+  assert.match(init.stdout, /created on your first `rabbitlock run`/);
+  assert.ok(!fs.existsSync(keyFile));
+  const run = await runCli(["run", "--sandbox", "off", "--quiet", "--", process.execPath, "-e", "0"], { cwd: dir, env: { ...env, RABBITLOCK_PASSPHRASE: PASS } });
+  assert.equal(run.code, 0, run.stderr);
+  assert.ok(fs.existsSync(keyFile) && !fs.readFileSync(keyFile, "utf8").includes("PRIVATE KEY"));
+});
