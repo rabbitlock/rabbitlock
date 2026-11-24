@@ -11,6 +11,9 @@ rabbitlock init                                  # identity + rabbitlock.agent.y
 echo -n "$TOKEN" | rabbitlock set GITHUB_TOKEN   # stored encrypted
 rabbitlock run -- claude                         # agent sees rl_ph_GITHUB_TOKEN_…
 rabbitlock receipts                              # what was used, where
+
+# A password the agent will use to create an admin account, shown once to you only:
+rabbitlock set ADMIN_PASSWORD --generate --reveal
 ```
 
 Requires Node.js 20+, on macOS or Linux.

@@ -2,7 +2,7 @@
 
 **Your coding agent can use your API keys without ever seeing them.**
 
-RabbitLock is a credential broker for coding agents (Claude Code, Codex, Cursor, and anything else that honours standard proxy settings). The agent's environment holds placeholders. A local proxy swaps in the real credential only on outbound HTTPS requests to hosts your policy allows. Sensitive secrets can require a human approval, and every use leaves a receipt that never contains the value.
+RabbitLock is a credential broker for coding agents. It's set up for Claude Code out of the box, and works with other agents whose tools honour standard proxy settings. The agent's environment holds placeholders. A local proxy swaps in the real credential only on outbound HTTPS requests to hosts your policy allows. Sensitive secrets can require a human approval, and every use leaves a receipt that never contains the value.
 
 ```bash
 rabbitlock init
@@ -20,6 +20,8 @@ secrets:
     hosts: [api.stripe.com]
     approval: once
 ```
+
+**Agents that set things up, not just use them:** `rabbitlock set ADMIN_PASSWORD --generate --reveal` creates a random secret and shows it once to you, not the agent. Use `--to-command` to send it to a password manager, or `--no-handoff` so nobody sees it. The agent can then create an admin account or configure a service through its API, using a credential it never sees. See [Let your agent set up accounts](https://rabbitlock.com/docs/guides/provisioning).
 
 ## What it protects, and what it doesn't
 

