@@ -3,6 +3,15 @@ title: Changelog
 description: Releases and what's planned next.
 ---
 
+## Unreleased: 0.3.0
+
+- Agent-led setup: [rabbitlock.com/agents.md](https://rabbitlock.com/agents.md) and a Claude Code plugin (`/plugin install rabbitlock --marketplace rabbitlock/rabbitlock`). See [Set up with your agent](/guides/agent-setup).
+- `rabbitlock status [--json]`: setup state and next steps, and lets an agent check whether it's running under RabbitLock
+- `rabbitlock import .env`: encrypt an existing `.env` in one step
+- `rabbitlock init --agents-md`: instructions for coding agents in `AGENTS.md`
+- `rabbitlock run` warns when a `.env` file next to the policy still holds a brokered secret's real value
+- `RABBITLOCK_SANDBOX` in the agent's environment
+
 ## 0.2.0 (2026-11-24)
 
 - `rabbitlock set NAME --generate`: creates a random secret and hands it to you (`--reveal`, `--to-command`) or to nobody (`--no-handoff`), so an agent can set up accounts and services with a credential it never sees. See [Let your agent set up accounts](/guides/provisioning).

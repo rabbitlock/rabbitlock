@@ -13,6 +13,9 @@ import {
   writeSecretsFile,
 } from "../src/crypto.mjs";
 import { POLICY_FILENAME, SECRET_NAME_PATTERN, examplePolicy, loadPolicy } from "../src/policy.mjs";
+import { AGENTS_BLOCK, ensureClaudeImport, upsertAgentsBlock } from "../src/agentsmd.mjs";
+import { parseDotenv } from "../src/dotenv.mjs";
+import { collectStatus, formatStatus } from "../src/status.mjs";
 import { DEFAULT_LENGTH, entropyBits, generateSecret, handOff, parseHandoff } from "../src/generate.mjs";
 import { createReceiptWriter, readReceipts } from "../src/receipts.mjs";
 import { runBrokered } from "../src/run.mjs";
@@ -24,7 +27,11 @@ The agent gets placeholders. RabbitLock swaps in real credentials only on
 outbound HTTPS requests to hosts your policy allows, and records a receipt.
 
 Usage:
-  rabbitlock init                     Create your identity and ${POLICY_FILENAME}
+  rabbitlock init [--agents-md]       Create your identity and ${POLICY_FILENAME}
+                                      (--agents-md: add agent instructions to AGENTS.md)
+  rabbitlock status [--json]          Setup state and next steps (agents: am I brokered?)
+  rabbitlock import FILE [--only A,B] [--force] [--delete]
+                                      Encrypt the secrets in a .env file
   rabbitlock set NAME                 Encrypt a secret (value from stdin or prompt)
   rabbitlock set NAME --generate (--reveal | --to-command CMD | --no-handoff)
                 [--length N] [--charset alnum|hex|base64url|symbols] [--force]
@@ -124,6 +131,7 @@ async function main(argv) {
 
   switch (command) {
     case "init": {
+      const agentsMd = takeBool(args, "--agents-md");
       const { created, seed } = createIdentity();
       const { publicKey } = keypairFromSeed(seed);
       const ca = loadLocalCA();
@@ -135,7 +143,77 @@ async function main(argv) {
         console.log(`Wrote ${target}`);
       }
       console.log(`Local CA: ${ca.certPath}`);
-      console.log("Add `.rabbitlock/` to .gitignore (receipts live there). Then: rabbitlock set NAME");
+      if (agentsMd) {
+        const dir = path.dirname(target);
+        const result = upsertAgentsBlock(path.join(dir, "AGENTS.md"), AGENTS_BLOCK);
+        console.log(`AGENTS.md: ${result} (RabbitLock instructions for coding agents)`);
+        if (ensureClaudeImport(dir) === "updated") console.log("CLAUDE.md: added `@AGENTS.md` so Claude Code reads them too");
+      }
+      console.log("Add `.rabbitlock/` to .gitignore (receipts live there). Then: rabbitlock import .env, or rabbitlock set NAME");
+      return 0;
+    }
+
+    case "status": {
+      const json = takeBool(args, "--json");
+      const status = collectStatus({ policyPath });
+      console.log(json ? JSON.stringify(status, null, 2) : formatStatus(status));
+      return 0;
+    }
+
+    case "import": {
+      const only = takeFlag(args, "--only");
+      const force = takeBool(args, "--force");
+      const remove = takeBool(args, "--delete");
+      const file = args.shift();
+      if (!file) throw new Error("Usage: rabbitlock import FILE [--only A,B] [--force] [--delete]");
+      if (args.length > 0) throw new Error(`Unexpected arguments: ${args.join(" ")}`);
+      const { entries, errors } = parseDotenv(fs.readFileSync(file, "utf8"));
+      const wanted = only ? new Set(only.split(",").map((n) => n.trim()).filter(Boolean)) : null;
+
+      const policy = loadPolicy(policyPath);
+      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
+      const secrets = readSecretsFile(policy.secretsFile, privateKey);
+
+      const imported = [];
+      const unchanged = [];
+      const skipped = [];
+      for (const [name, value] of entries) {
+        if (wanted && !wanted.has(name)) continue;
+        if (!SECRET_NAME_PATTERN.test(name)) skipped.push(`${name} (name must match ${SECRET_NAME_PATTERN})`);
+        else if (value === "") skipped.push(`${name} (empty)`);
+        else if (secrets[name] === value) unchanged.push(name);
+        else if (name in secrets && !force) skipped.push(`${name} (already stored with a different value; --force to replace)`);
+        else {
+          secrets[name] = value;
+          imported.push(name);
+        }
+      }
+      for (const name of wanted ?? []) {
+        if (!entries.some(([k]) => k === name)) skipped.push(`${name} (not in ${file})`);
+      }
+      for (const e of errors) skipped.push(`line ${e.line} (${e.reason})`);
+
+      if (imported.length > 0) writeSecretsFile(policy.secretsFile, secrets, recipientsFor(policy, publicKey));
+      console.log(`Imported ${imported.length}: ${imported.join(", ") || "none"}`);
+      if (unchanged.length > 0) console.log(`Already stored: ${unchanged.join(", ")}`);
+      for (const s of skipped) console.log(`Skipped: ${s}`);
+
+      const noPolicy = [...imported, ...unchanged].filter((n) => !policy.secrets[n]);
+      if (noPolicy.length > 0) {
+        console.log(`\nAgents won't receive these until you add their allowed hosts to ${path.basename(policy.path)}:`);
+        for (const n of noPolicy) console.log(`  ${n}:\n    hosts: [<host>]`);
+      }
+      const failed = skipped.some((s) => s.includes("--force") || s.startsWith("line "));
+      if (remove) {
+        if (failed) {
+          console.log(`\nNot deleting ${file}: some entries were skipped.`);
+        } else {
+          fs.unlinkSync(file);
+          console.log(`\nDeleted ${file}.`);
+        }
+      } else if (imported.length + unchanged.length > 0) {
+        console.log(`\n${file} still holds the plaintext values, and the agent can read it. Delete it once you've checked the import (or re-run with --delete).`);
+      }
       return 0;
     }
 
