@@ -1,9 +1,14 @@
 ---
 title: Encrypted storage
-description: How secrets are stored in your repository and who can decrypt them.
+description: Where your secrets are stored, how they're encrypted, and who can decrypt them.
 ---
 
-Secrets live in a SOPS-format JSON file (`secrets.sops.json` by default) in your repository. You commit it like any other file.
+Secrets live in a SOPS-format JSON file. Where it lives depends on the project's mode:
+
+| Mode | Location | Who can decrypt |
+| --- | --- | --- |
+| **Individual** (default) | `~/.rabbitlock/projects/<project>/secrets.sops.json`, outside the repo | Only you |
+| **Team** (`rabbitlock team enable`) | `secrets.sops.json` in the repo, committed | Every recipient listed in the policy |
 
 - **Encryption:** secret values are encrypted with a random data key. The data key is encrypted separately for each recipient using hybrid post-quantum encryption, which combines **X25519 and ML-KEM-768**. It is designed so that an attacker has to break both.
 - **Integrity:** the file carries a MAC. RabbitLock verifies it on every read, and a tampered file stops the run.
@@ -16,7 +21,7 @@ rabbitlock rm NAME      # remove
 rabbitlock ls           # names and their policy, never values
 ```
 
-Every change re-encrypts the file for all recipients in the policy. Your own public key is always included. See [Teams](/guides/teams).
+Every change re-encrypts the file. In team mode it's encrypted for every recipient in the policy, and your own key is always included. See [Teams](/guides/teams).
 
 <Callout type="warn" title="Back up your identity">
 If you lose `~/.rabbitlock/identity` and nobody else is a recipient, the secrets can't be recovered. Re-create them from their source.

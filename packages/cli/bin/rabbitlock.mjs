@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 
 import { loadLocalCA } from "../src/ca.mjs";
@@ -12,10 +13,12 @@ import {
   readSecretsFile,
   writeSecretsFile,
 } from "../src/crypto.mjs";
+import { rabbitlockHome } from "../src/paths.mjs";
 import { POLICY_FILENAME, SECRET_NAME_PATTERN, examplePolicy, loadPolicy } from "../src/policy.mjs";
 import { AGENTS_BLOCK, ensureClaudeImport, upsertAgentsBlock } from "../src/agentsmd.mjs";
 import { parseDotenv } from "../src/dotenv.mjs";
 import { cliVersion, collectStatus, formatStatus } from "../src/status.mjs";
+import { addMember, enableTeam, fingerprint, listMembers, removeMember } from "../src/team.mjs";
 import { DEFAULT_LENGTH, entropyBits, generateSecret, handOff, parseHandoff } from "../src/generate.mjs";
 import { createReceiptWriter, readReceipts } from "../src/receipts.mjs";
 import { runBrokered } from "../src/run.mjs";
@@ -38,6 +41,11 @@ Usage:
                                       Create a random secret the agent can use but never see
   rabbitlock rm NAME                  Remove a secret
   rabbitlock ls                       List secret names and their policy
+  rabbitlock key                      Print your public key (teammates add it to share secrets)
+  rabbitlock team enable              Share this project's secrets: move them into the repo, encrypted
+  rabbitlock team add KEY [--name N]  Give a teammate access (re-encrypts the shared file)
+  rabbitlock team remove NAME|KEY     Revoke a teammate's access to future versions
+  rabbitlock team ls                  List who can decrypt
   rabbitlock run [--sandbox auto|on|off] [--quiet] -- CMD...
                                       Run an agent with brokered credentials
   rabbitlock receipts [--tail N]      Show recent receipts
@@ -116,6 +124,12 @@ async function confirm(question) {
   }
 }
 
+function gitUserName() {
+  const result = spawnSync("git", ["config", "user.name"], { encoding: "utf8" });
+  const name = result.status === 0 ? result.stdout.trim() : "";
+  return name || null;
+}
+
 function recipientsFor(policy, publicKey) {
   const recipients = [...policy.recipients];
   if (!recipients.includes(publicKey.toLowerCase())) {
@@ -135,14 +149,13 @@ async function main(argv) {
     case "init": {
       const agentsMd = takeBool(args, "--agents-md");
       const { created, seed } = createIdentity();
-      const { publicKey } = keypairFromSeed(seed);
+      keypairFromSeed(seed); // fails early on a malformed identity
       const ca = loadLocalCA();
       console.log(created ? `Created identity at ${identityPath()}` : `Using existing identity at ${identityPath()}`);
-      console.log(`Public key (share with teammates who should encrypt for you):\n  ${publicKey}`);
       const target = path.resolve(policyPath ?? POLICY_FILENAME);
       if (!fs.existsSync(target)) {
-        fs.writeFileSync(target, examplePolicy(publicKey));
-        console.log(`Wrote ${target}`);
+        fs.writeFileSync(target, examplePolicy());
+        console.log(`Wrote ${target} (safe to commit; your encrypted secrets stay in ${path.join(rabbitlockHome(), "projects")})`);
       }
       console.log(`Local CA: ${ca.certPath}`);
       if (agentsMd) {
@@ -151,7 +164,9 @@ async function main(argv) {
         console.log(`AGENTS.md: ${result} (RabbitLock instructions for coding agents)`);
         if (ensureClaudeImport(dir) === "updated") console.log("CLAUDE.md: added `@AGENTS.md` so Claude Code reads them too");
       }
-      console.log("Add `.rabbitlock/` to .gitignore (receipts live there). Then: rabbitlock import .env, or rabbitlock set NAME");
+      const mode = loadPolicy(target).mode;
+      if (mode === "team") console.log("Add `.rabbitlock/` to .gitignore (receipts live there).");
+      console.log("Next: add your secrets' allowed hosts to the policy, then `rabbitlock import .env` or `rabbitlock set NAME`. `rabbitlock status` shows what's left.");
       return 0;
     }
 
@@ -301,6 +316,59 @@ async function main(argv) {
         console.log(`${name.padEnd(28)} ${status}`);
       }
       return 0;
+    }
+
+    case "key": {
+      const { publicKey } = keypairFromSeed(loadSeed());
+      console.log(publicKey);
+      if (process.stdout.isTTY) {
+        console.error("\nYour public key: safe to share. A teammate adds it with `rabbitlock team add <key> --name <you>`.");
+      }
+      return 0;
+    }
+
+    case "team": {
+      const sub = args.shift();
+      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
+      const usage = "Usage: rabbitlock team enable | add KEY [--name NAME] | remove NAME|KEY | ls";
+      if (sub === "enable") {
+        const policy = loadPolicy(policyPath);
+        const name = takeFlag(args, "--name") ?? gitUserName() ?? os.userInfo().username;
+        const { target, count } = enableTeam(policy, { privateKey, publicKey, name });
+        console.log(`Team mode on. Moved ${count} secret(s) into ${path.relative(process.cwd(), target)}, encrypted for: ${name} (you).`);
+        console.log("Commit rabbitlock.agent.yaml and secrets.sops.json. To add a teammate:");
+        console.log("  1. they run `rabbitlock init` in this repo, then `rabbitlock key`, and send you the key");
+        console.log("  2. you run `rabbitlock team add <key> --name <them>` and commit");
+        return 0;
+      }
+      if (sub === "add") {
+        const name = takeFlag(args, "--name");
+        const key = args.shift();
+        if (!key) throw new Error(usage);
+        const { count } = addMember(loadPolicy(policyPath), { privateKey, publicKey, key, name });
+        console.log(`Added ${name ?? fingerprint(key.trim().toLowerCase())}. Re-encrypted ${count} secret(s) for them. Commit rabbitlock.agent.yaml and secrets.sops.json.`);
+        return 0;
+      }
+      if (sub === "remove") {
+        const who = args.shift();
+        if (!who) throw new Error(usage);
+        const { removed, secrets } = removeMember(loadPolicy(policyPath), { privateKey, publicKey, who });
+        console.log(`Removed ${removed.name ?? fingerprint(removed.key)}. New versions of secrets.sops.json are no longer encrypted for them.`);
+        if (secrets.length > 0) {
+          console.log(`They can still decrypt older versions from git history: rotate ${secrets.join(", ")} at each provider, then \`rabbitlock set\` the new values.`);
+        }
+        return 0;
+      }
+      if (sub === "ls" || sub === undefined) {
+        const members = listMembers(policyPath, publicKey);
+        if (members.length === 0) {
+          console.log("Individual mode: only you can decrypt this project's secrets. Run `rabbitlock team enable` to share them.");
+          return 0;
+        }
+        for (const m of members) console.log(`${(m.name ?? "(unnamed)").padEnd(24)} ${fingerprint(m.key)}${m.you ? "  (you)" : ""}`);
+        return 0;
+      }
+      throw new Error(usage);
     }
 
     case "run": {

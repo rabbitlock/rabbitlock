@@ -113,6 +113,8 @@ export function collectStatus({ env = process.env, policyPath, cwd = process.cwd
       policy = loadPolicy(found);
       status.policy = {
         path: policy.path,
+        mode: policy.mode,
+        secretsFile: policy.secretsFile,
         secrets: Object.fromEntries(Object.entries(policy.secrets).map(([k, r]) => [k, { hosts: r.hosts, approval: r.approval }])),
       };
     } catch (err) {
@@ -204,6 +206,13 @@ export function formatStatus(s) {
     if (s.identity) out.push(`Identity: ${s.identity.present ? `present (${s.identity.source})` : "missing"}`);
   }
   if (s.policy?.path) out.push(`Policy: ${s.policy.path}${s.policy.error ? ` (error: ${s.policy.error})` : ""}`);
+  if (s.policy?.mode) {
+    out.push(
+      s.policy.mode === "individual"
+        ? `Mode: individual (encrypted secrets kept on this machine: ${s.policy.secretsFile})`
+        : `Mode: team (encrypted secrets shared in ${s.policy.secretsFile})`,
+    );
+  }
   for (const [name, rule] of Object.entries(s.policy?.secrets ?? {})) {
     const state = s.stored === null ? "" : s.stored.includes(name) ? "" : "  MISSING VALUE";
     out.push(`  ${name.padEnd(28)} ${rule.hosts.join(", ")}  approval=${rule.approval}${state}`);

@@ -1,9 +1,13 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 
+import { rabbitlockHome } from "./paths.mjs";
+
 export const POLICY_FILENAME = "rabbitlock.agent.yaml";
 export const SECRET_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+export const PROJECT_PATTERN = /^[a-z0-9][a-z0-9-]{3,63}$/;
 const APPROVAL_MODES = new Set(["never", "once", "every"]);
 const HOST_PATTERN = /^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
 
@@ -34,12 +38,25 @@ export function parsePolicy(text, policyPath) {
   const baseDir = path.dirname(policyPath);
   const errors = [];
 
-  const secretsFile = raw.secrets_file ?? "secrets.sops.json";
-  const receipts = raw.receipts ?? ".rabbitlock/receipts.jsonl";
-  const recipients = raw.recipients ?? [];
+  const project = raw.project;
+  if (project !== undefined && (typeof project !== "string" || !PROJECT_PATTERN.test(project))) {
+    errors.push(`project must match ${PROJECT_PATTERN}`);
+  }
 
-  if (!Array.isArray(recipients) || recipients.some((r) => typeof r !== "string" || !/^[0-9a-f]+$/i.test(r))) {
-    errors.push("recipients must be a list of hex public keys");
+  // Recipients: a hex public key, or { name, key } for readability.
+  const rawRecipients = raw.recipients ?? [];
+  const recipientEntries = [];
+  if (!Array.isArray(rawRecipients)) {
+    errors.push("recipients must be a list");
+  } else {
+    for (const r of rawRecipients) {
+      const entry = typeof r === "string" ? { name: null, key: r } : r && typeof r === "object" ? { name: r.name ?? null, key: r.key } : null;
+      if (!entry || typeof entry.key !== "string" || !/^[0-9a-f]+$/i.test(entry.key) || (entry.name !== null && typeof entry.name !== "string")) {
+        errors.push("recipients entries must be a hex public key or { name, key }");
+        continue;
+      }
+      recipientEntries.push({ name: entry.name, key: entry.key.toLowerCase() });
+    }
   }
 
   const secrets = {};
@@ -76,11 +93,30 @@ export function parsePolicy(text, policyPath) {
     throw new Error(`Invalid policy ${policyPath}:\n  - ${errors.join("\n  - ")}`);
   }
 
+  // Where secrets and receipts live:
+  //  - secrets_file set: in the repo (team mode: the encrypted file is committed and shared)
+  //  - project set, no secrets_file: under RABBITLOCK_HOME/projects/<project> (individual mode)
+  //  - neither (policies from before 0.4): in the repo, as before
+  const projectDir = project ? path.join(rabbitlockHome(), "projects", project) : null;
+  const secretsFile = raw.secrets_file
+    ? path.resolve(baseDir, raw.secrets_file)
+    : projectDir
+      ? path.join(projectDir, "secrets.sops.json")
+      : path.resolve(baseDir, "secrets.sops.json");
+  const receipts = raw.receipts
+    ? path.resolve(baseDir, raw.receipts)
+    : projectDir
+      ? path.join(projectDir, "receipts.jsonl")
+      : path.resolve(baseDir, ".rabbitlock/receipts.jsonl");
+
   return {
     path: policyPath,
-    secretsFile: path.resolve(baseDir, secretsFile),
-    receipts: path.resolve(baseDir, receipts),
-    recipients: recipients.map((r) => r.toLowerCase()),
+    project: project ?? null,
+    mode: raw.secrets_file || !project ? "team" : "individual",
+    secretsFile,
+    receipts,
+    recipients: recipientEntries.map((r) => r.key),
+    recipientEntries,
     secrets,
   };
 }
@@ -107,15 +143,16 @@ export function interceptHosts(policy) {
   return [...new Set(Object.values(policy.secrets).flatMap((rule) => rule.hosts))];
 }
 
-export function examplePolicy(publicKey) {
-  return `# RabbitLock agent policy. Commit this file; it contains no secrets.
-# Secrets live encrypted in secrets_file. The agent only ever sees placeholders.
-secrets_file: secrets.sops.json
-receipts: .rabbitlock/receipts.jsonl
+export function newProjectId() {
+  return randomBytes(6).toString("hex");
+}
 
-# Public keys that can decrypt secrets_file (yours first; add teammates' keys).
-recipients:
-  - ${publicKey}
+/** Individual mode: nothing secret in the repo, nothing to decide about committing. */
+export function examplePolicy(projectId = newProjectId()) {
+  return `# RabbitLock policy: which hosts may receive each secret. Safe to commit; it contains no secrets.
+# Encrypted values and receipts are kept on your machine, in ~/.rabbitlock/projects/<project>.
+# To share secrets with teammates, run: rabbitlock team enable
+project: ${projectId}
 
 secrets: {}
 # Example:

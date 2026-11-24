@@ -76,7 +76,9 @@ test("init creates identity, policy and CA", async () => {
   const identity = path.join(dir, "home", "identity");
   assert.equal(fs.statSync(identity).mode & 0o777, 0o600);
   assert.equal(fs.statSync(path.join(dir, "home", "ca", "rabbitlock-ca.key")).mode & 0o777, 0o600);
-  assert.match(fs.readFileSync(path.join(dir, "rabbitlock.agent.yaml"), "utf8"), /recipients:\n {2}- [0-9a-f]+/);
+  const policyText = fs.readFileSync(path.join(dir, "rabbitlock.agent.yaml"), "utf8");
+  assert.match(policyText, /^project: [0-9a-f]{12}$/m, "individual mode by default");
+  assert.ok(!/^(recipients|secrets_file):/m.test(policyText), "no team settings until team enable");
 });
 
 test("broker injects only for allowed hosts, gates approvals, and never leaks values", { skip: !hasCurl && "curl not installed" }, async () => {

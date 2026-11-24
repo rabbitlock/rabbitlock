@@ -84,6 +84,26 @@ Shows the setup state and the next steps, never values.
 
 `--json` is meant for agents and scripts; the fields are `version`, `session`, `identity`, `policy`, `stored`, `missingValues`, `notInPolicy`, `plaintextCopies`, `sandbox` and `nextSteps`.
 
+## `key`
+
+Prints your public key. It's safe to share: a teammate adds it with `rabbitlock team add`.
+
+## `team`
+
+```bash
+rabbitlock team enable [--name NAME]
+rabbitlock team add KEY [--name NAME]
+rabbitlock team remove NAME|KEY
+rabbitlock team ls
+```
+
+- **`enable`:** switches the project from individual to team mode. It moves the encrypted secrets from `~/.rabbitlock/projects/<project>/` into `secrets.sops.json` next to the policy, sets `secrets_file`, and lists you as a named recipient (default name: your git `user.name`). It refuses if team mode is already on or `secrets.sops.json` already exists.
+- **`add`:** adds a recipient and re-encrypts. A malformed key changes nothing.
+- **`remove`:** removes a recipient by name or key (or a unique key prefix) and re-encrypts, then lists the secrets to rotate. You can't remove yourself.
+- **`ls`:** who can decrypt; `(you)` marks your key. In individual mode it says so.
+
+The other `team` commands need team mode.
+
 ## `ls`
 
 Lists every name in the secrets file or the policy, with its status. Never prints values.

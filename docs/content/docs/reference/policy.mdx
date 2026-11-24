@@ -4,11 +4,13 @@ description: The rabbitlock.agent.yaml schema.
 ---
 
 ```yaml title="rabbitlock.agent.yaml"
-secrets_file: secrets.sops.json        # default
-receipts: .rabbitlock/receipts.jsonl   # default
+project: 3f9a1c2b7d4e                  # written by `rabbitlock init`
 
-recipients:                            # public keys that can decrypt secrets_file
-  - 3f9a…
+# Team mode only (written by `rabbitlock team enable`):
+# secrets_file: secrets.sops.json
+# recipients:
+#   - { name: you, key: 3f9a… }
+#   - { name: ana, key: 8c21… }
 
 secrets:
   GITHUB_TOKEN:
@@ -25,9 +27,10 @@ secrets:
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `secrets_file` | path | `secrets.sops.json` | Relative to the policy file |
-| `receipts` | path | `.rabbitlock/receipts.jsonl` | Relative to the policy file |
-| `recipients` | list of hex public keys | `[]` | Your own key is always added on write |
+| `project` | id (`[a-z0-9-]`, 4 to 64 chars) | written by `init` | Without `secrets_file`, secrets and receipts live in `~/.rabbitlock/projects/<project>/` (individual mode) |
+| `secrets_file` | path | none | Set by `team enable`. The encrypted file lives here, relative to the policy file, and is committed (team mode) |
+| `receipts` | path | `~/.rabbitlock/projects/<project>/receipts.jsonl` | Relative to the policy file if set |
+| `recipients` | list of hex keys, or `{ name, key }` | `[]` | Who can decrypt in team mode. Your own key is always added on write. Manage with `rabbitlock team` |
 | `secrets` | map | `{}` | Only secrets listed here reach the agent |
 | `secrets.<NAME>.hosts` | list | required, non-empty | Exact host names, or one leading wildcard |
 | `secrets.<NAME>.approval` | `never` \| `once` \| `every` | `never` | See [Approvals](/guides/approvals) |
@@ -45,4 +48,7 @@ Malformed entries are errors, never guesses. A typo must not silently widen or d
 - a secret name that doesn't match `^[A-Z][A-Z0-9_]*$`
 - a missing or empty `hosts` list, or an invalid host entry
 - an `approval` value other than `never`, `once` or `every`
-- `recipients` entries that aren't hex strings
+- a `project` id with characters other than `a-z`, `0-9` and `-`
+- `recipients` entries that aren't a hex key or `{ name, key }`
+
+Policies written before 0.4 (no `project`, no `secrets_file`) keep their secrets in `secrets.sops.json` and receipts in `.rabbitlock/` next to the policy, as before.
