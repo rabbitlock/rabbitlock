@@ -10,7 +10,7 @@ export const AGENTS_BLOCK = `${START}
 
 This project uses [RabbitLock](https://rabbitlock.com/docs). Under \`rabbitlock run\`, secret environment variables (for example \`$GITHUB_TOKEN\`) hold placeholders like \`rl_ph_GITHUB_TOKEN_…\`. Use them exactly as you would the real value, in headers, URLs or JSON/form bodies. RabbitLock swaps in the real value only on HTTPS requests to that secret's allowed hosts in \`rabbitlock.agent.yaml\`.
 
-- Never print, log or commit secret variables, and don't hash or re-encode them yourself (standard Basic auth is fine).
+- Never print, log or commit secret variables, and don't hash or re-encode them yourself (standard Basic auth is fine). Don't dump the environment (\`env\`, \`printenv\`, \`set\`): other tools keep credentials there too. Use \`rabbitlock status\` to see what's brokered.
 - Run \`rabbitlock status\` to see whether you're running under RabbitLock, which variables are brokered and their allowed hosts.
 - A \`403\` with the header \`x-rabbitlock: denied\` means the host isn't allowed for that secret, the request used plain HTTP, or a person declined the approval. Tell the user; don't work around it.
 - Never ask the user to paste a secret into the chat. To add one, ask them to run \`rabbitlock set NAME\` in their own terminal (\`rabbitlock set NAME --generate --reveal\` for a new password), agree its allowed hosts with them, and have them restart the session.

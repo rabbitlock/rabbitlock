@@ -15,7 +15,7 @@ import {
 import { POLICY_FILENAME, SECRET_NAME_PATTERN, examplePolicy, loadPolicy } from "../src/policy.mjs";
 import { AGENTS_BLOCK, ensureClaudeImport, upsertAgentsBlock } from "../src/agentsmd.mjs";
 import { parseDotenv } from "../src/dotenv.mjs";
-import { collectStatus, formatStatus } from "../src/status.mjs";
+import { cliVersion, collectStatus, formatStatus } from "../src/status.mjs";
 import { DEFAULT_LENGTH, entropyBits, generateSecret, handOff, parseHandoff } from "../src/generate.mjs";
 import { createReceiptWriter, readReceipts } from "../src/receipts.mjs";
 import { runBrokered } from "../src/run.mjs";
@@ -43,6 +43,8 @@ Usage:
   rabbitlock receipts [--tail N]      Show recent receipts
   rabbitlock ca                       Print the local CA certificate path
   rabbitlock ca trust | untrust       Trust the CA in the macOS login keychain (for Go tools such as gh)
+
+  rabbitlock --version                Print the version
 
 Options:
   --policy PATH                       Use a specific policy file
@@ -359,6 +361,12 @@ async function main(argv) {
       const result = spawnSync("security", cmd, { stdio: "inherit" });
       return result.status ?? 1;
     }
+
+    case "version":
+    case "--version":
+    case "-v":
+      console.log(cliVersion());
+      return 0;
 
     case undefined:
     case "help":

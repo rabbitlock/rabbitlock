@@ -15,9 +15,9 @@ Read all of this before you act.
 1. **Check the environment.**
    - Node.js 20 or newer: `node --version`.
    - macOS or Linux. On Linux, check `command -v bwrap`. If it's missing, ask the user to install bubblewrap (for example `sudo apt install bubblewrap`), which lets RabbitLock sandbox the agent. On Windows, tell the user that RabbitLock can't sandbox agents there before going further.
-   - If `rabbitlock` is already installed, run `rabbitlock status`. If it reports an active session, RabbitLock is already set up and running: follow the project's `AGENTS.md` instead of these steps.
+   - If `rabbitlock` is already installed, run `rabbitlock --version` and `rabbitlock status`. If it reports an active session, RabbitLock is already set up and running: follow the project's `AGENTS.md` instead of these steps.
 
-2. **Install the CLI:** `npm install -g @rabbitlock/cli`. If that fails with a permissions error, tell the user instead of retrying with `sudo`.
+2. **Install the CLI:** `npm install -g @rabbitlock/cli`. If that fails with a permissions error, tell the user instead of retrying with `sudo`. Then check `rabbitlock --version` reports **0.3.0 or newer**; these steps need `status`, `import` and `init --agents-md`. If it's older (or `--version` is an unknown command), run `npm install -g @rabbitlock/cli@latest`.
 
 3. **Initialize, in the project root:** `rabbitlock init --agents-md`. This creates the user's identity (`~/.rabbitlock`), the policy file `rabbitlock.agent.yaml`, and agent instructions in `AGENTS.md` (plus an `@AGENTS.md` line in `CLAUDE.md` if one exists). Add `.rabbitlock/` to `.gitignore`.
 
@@ -42,7 +42,7 @@ Read all of this before you act.
    Suggest `approval: once` for credentials that can move money or change production. Write it to `rabbitlock.agent.yaml` only after the user agrees.
 
 6. **Have the user store the values.** Give them the commands to run **in their own terminal**, then wait for them to confirm:
-   - From an existing `.env`: `rabbitlock import .env`. Then they should delete `.env` (or use `--delete`), because an agent could still read it.
+   - From an existing `.env`: `rabbitlock import .env`. Then they should delete `.env` (or use `--delete`), because an agent could still read it. If `.env` also holds values RabbitLock can't broker (such as `DATABASE_URL`) that the app still needs, use `rabbitlock import .env --only NAME,NAME` and have them remove just those lines from `.env`.
    - One at a time: `rabbitlock set NAME` (hidden prompt).
    - A new password or secret you'll need to set something up (for example a new admin account): `rabbitlock set NAME --generate --reveal`. It shows the value once to the user, and you only ever get a placeholder.
 

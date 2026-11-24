@@ -106,6 +106,9 @@ test("CLI: init --agents-md, import, and status walk a new project to ready", as
   const env = { PATH: process.env.PATH, RABBITLOCK_HOME: home };
   fs.writeFileSync(path.join(dir, "CLAUDE.md"), "# Project rules\n");
 
+  const version = await runCli(["--version"], { cwd: dir, env });
+  assert.equal(version.stdout.trim(), JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+
   const before = JSON.parse((await runCli(["status", "--json"], { cwd: dir, env })).stdout);
   assert.equal(before.session.active, false);
   assert.match(before.nextSteps[0], /rabbitlock init/);
