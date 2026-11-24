@@ -16,7 +16,7 @@ rabbitlock init [--agents-md]
 ```
 
 - Creates `~/.rabbitlock/identity` (mode `0600`) if it doesn't exist. An existing identity is never overwritten, and a passphrase-protected one isn't unlocked.
-- Creates the local CA in `~/.rabbitlock/ca/` if needed.
+- Creates the local CA in `~/.rabbitlock/ca/` if needed. Its private key is stored encrypted under your identity. If your identity has a passphrase, the CA is created on your first `rabbitlock run` instead, so `init` never prompts.
 - Writes an example `rabbitlock.agent.yaml` with a new `project` id, unless one already exists.
 - Prints the CA certificate path.
 - `--agents-md`: adds (or updates) a RabbitLock section in `AGENTS.md` telling coding agents how to use placeholders and what to ask you for. If `CLAUDE.md` exists, adds an `@AGENTS.md` line so Claude Code reads it too.
@@ -156,6 +156,8 @@ rabbitlock ca                      # print the local CA certificate path
 rabbitlock ca trust [--yes]        # macOS: trust it in the login keychain
 rabbitlock ca untrust [--yes]      # macOS: remove that trust
 ```
+
+Printing the path and `trust`/`untrust` only need the certificate, not the key or your passphrase. The CA's private key is stored encrypted under a key derived from your identity, and is unlocked only by `rabbitlock run`. A plain-text key left by a version before 0.4.1 is encrypted the next time you run `rabbitlock run`.
 
 `trust` and `untrust` print the exact `security` command and ask for confirmation. `--yes` skips RabbitLock's confirmation, but macOS still asks for your password. Not running in a terminal and no `--yes`? It refuses. On Linux, `trust` prints instructions instead. See [Trust the CA on macOS](/guides/macos-ca-trust).
 

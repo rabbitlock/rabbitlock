@@ -11,8 +11,8 @@ description: What RabbitLock does not do today. Kept current, and every limit is
 | **Responses are not scrubbed** | An allowed API that echoes the token back would show it to the agent | Avoid such endpoints; planned |
 | **Bodies over 1 MiB, compressed or multipart** | Not substituted, so they carry only the placeholder (the request fails safely) | Planned |
 | **HTTP/2-only clients, WebSockets** | Not intercepted | Planned |
-| **Local CA has no name constraints** | Anyone with the CA key could impersonate any site to programs that trust it | The sandbox denies the agent access to it; run `rabbitlock ca untrust` when you're done |
+| **Local CA has no name constraints** | Anyone with the CA key could impersonate any site to programs that trust it | The key is encrypted under your identity (set a passphrase with `rabbitlock key protect`), and the sandbox denies the agent access to it. Run `rabbitlock ca untrust` when you're done |
 | **Identity without a passphrase** (the default) | Any program running as you, outside the agent sandbox, can read the key file | `rabbitlock key protect` |
-| **Key in memory during a session** | While `rabbitlock run` runs, the unlocked key and secrets are in its memory | Same-user memory reads need debugger rights on macOS, and are blocked from descendant processes by Linux's default `ptrace_scope` |
+| **Key in memory during a session** | While `rabbitlock run` runs, the unlocked key, the CA key and the secrets are in its memory | Same-user memory reads need debugger rights on macOS, and are blocked from descendant processes by Linux's default `ptrace_scope` |
 | **Removing a recipient** | Doesn't revoke access to older ciphertext in git history | Rotate tokens when someone leaves |
 | **Approval dialog** | Logic is tested; the OS dialogs aren't covered by automated end-to-end tests yet | |

@@ -106,7 +106,8 @@ export async function runBrokered(policy, command, args, { quiet = false, sandbo
   // Key material in the broker's environment is readable by same-user processes on macOS, so the
   // sandbox also hides other processes from the agent in that case.
   const keyFromEnv = Boolean(process.env.RABBITLOCK_SEED_HEX || process.env.RABBITLOCK_PASSPHRASE);
-  const { privateKey } = keypairFromSeed(await loadSeed());
+  const seed = await loadSeed();
+  const { privateKey } = keypairFromSeed(seed);
   const stored = readSecretsFile(policy.secretsFile, privateKey);
 
   const names = Object.keys(policy.secrets);
@@ -119,7 +120,8 @@ export async function runBrokered(policy, command, args, { quiet = false, sandbo
 
   const session = randomUUID();
   const placeholders = makePlaceholders(names);
-  const ca = loadLocalCA();
+  const ca = loadLocalCA(seed);
+  if (ca.migrated) process.stderr.write("rabbitlock: encrypted the local CA key at rest (it was stored in plain text by an older version).\n");
   const receipt = createReceiptWriter(policy.receipts, session, values);
   const proxy = await startProxy({
     policy,

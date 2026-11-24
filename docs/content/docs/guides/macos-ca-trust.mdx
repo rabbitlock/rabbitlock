@@ -24,7 +24,7 @@ rabbitlock ca untrust
 ```
 
 <Callout type="warn" title="What trusting means">
-A trusted CA can vouch for **any** website to programs on your Mac. RabbitLock's CA key lives in `~/.rabbitlock/ca/` (owner-only), and the agent sandbox denies the agent read access to it. Keep it that way. Run `rabbitlock ca untrust` if you stop using RabbitLock.
+A trusted CA can vouch for **any** website to programs on your Mac. RabbitLock's CA key lives in `~/.rabbitlock/ca/`, encrypted under your identity (and so under your passphrase, if you set one with `rabbitlock key protect`). The file is owner-only, and the agent sandbox denies the agent read access to it. Keep it that way. Run `rabbitlock ca untrust` if you stop using RabbitLock.
 </Callout>
 
 On Linux this step isn't needed; `rabbitlock ca trust` prints how to trust the CA system-wide if you want to anyway.
