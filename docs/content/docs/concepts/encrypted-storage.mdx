@@ -12,7 +12,8 @@ Secrets live in a SOPS-format JSON file. Where it lives depends on the project's
 
 - **Encryption:** secret values are encrypted with a random data key. The data key is encrypted separately for each recipient using hybrid post-quantum encryption, which combines **X25519 and ML-KEM-768**. It is designed so that an attacker has to break both.
 - **Integrity:** the file carries a MAC. RabbitLock verifies it on every read, and a tampered file stops the run.
-- **Your key:** a 32-byte seed in `~/.rabbitlock/identity` (owner-only permissions) derives your hybrid keypair. It never leaves your machine and is never sent to RabbitLock.
+- **Your key:** a 32-byte seed in `~/.rabbitlock/identity` derives your hybrid keypair. It never leaves your machine and is never sent to RabbitLock. The file is owner-only (`0600`), and you can encrypt it with a passphrase (see [Protect your key with a passphrase](#protect-your-key-with-a-passphrase)).
+- **File permissions:** the secrets file and receipts are written owner-only (`0600`), atomically, so a crash can't leave a half-written file. New directories under `~/.rabbitlock` are `0700`.
 - **The file holds a flat set of `NAME: value` pairs.** Only names that also appear in the policy are given to agents.
 
 ```bash
@@ -24,5 +25,19 @@ rabbitlock ls           # names and their policy, never values
 Every change re-encrypts the file. In team mode it's encrypted for every recipient in the policy, and your own key is always included. See [Teams](/guides/teams).
 
 <Callout type="warn" title="Back up your identity">
-If you lose `~/.rabbitlock/identity` and nobody else is a recipient, the secrets can't be recovered. Re-create them from their source.
+If you lose `~/.rabbitlock/identity` (or its passphrase) and nobody else is a recipient, the secrets can't be recovered. Re-create them from their source.
 </Callout>
+
+## Protect your key with a passphrase
+
+By default the identity file is protected by file permissions alone. Any program running as you can read it, which is why `rabbitlock run` sandboxes the agent. Other programs on your machine aren't sandboxed: a malicious package install script, or a backup or sync tool that copies your home directory.
+
+```bash
+rabbitlock key protect
+```
+
+This encrypts the seed with your passphrase, using scrypt (about 128 MiB of memory per guess) and AES-256-GCM. A copy of the file is then useless without the passphrase. RabbitLock asks for it on your terminal when it needs your private key: when you start `rabbitlock run`, and for `set`, `import`, `rm` and team changes. The agent never sees the prompt. It runs before the agent starts, and the agent's environment never contains the passphrase.
+
+What it doesn't change: while `rabbitlock run` is running, the unlocked key and the decrypted secrets are in RabbitLock's memory. Use the passphrase together with the sandbox, not instead of it.
+
+We looked at the macOS Keychain and the Secure Enclave. Neither fits a CLI today. A Keychain item that the `security` tool may read can be read silently by any program running as you, and the Secure Enclave can't hold the post-quantum (ML-KEM) half of the key without a signed native helper.

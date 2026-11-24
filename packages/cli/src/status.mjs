@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { identityPath, keypairFromSeed, loadSeed, readSecretsFile } from "./crypto.mjs";
+import { identityPath, keypairFromSeed, loadSeedIfUnlocked, readIdentity, readSecretNames, readSecretsFile } from "./crypto.mjs";
 import { findPolicy, loadPolicy } from "./policy.mjs";
 
 const PLACEHOLDER = /^rl_ph_([A-Z][A-Z0-9_]*)_[0-9a-f]{32}$/;
@@ -139,7 +139,15 @@ export function collectStatus({ env = process.env, policyPath, cwd = process.cwd
 
   const seedFromEnv = Boolean(env.RABBITLOCK_SEED_HEX);
   const idFile = identityPath();
-  status.identity = { present: seedFromEnv || fs.existsSync(idFile), source: seedFromEnv ? "env" : "file", path: idFile };
+  status.identity = { present: seedFromEnv || fs.existsSync(idFile), source: seedFromEnv ? "env" : "file", path: idFile, protected: false };
+  if (!seedFromEnv && status.identity.present) {
+    try {
+      status.identity.protected = readIdentity(idFile).protected;
+    } catch (err) {
+      status.nextSteps.push(err.message);
+      return status;
+    }
+  }
 
   if (!status.identity.present || !status.policy) {
     status.nextSteps.push("Run `rabbitlock init` in the project root to create your identity and rabbitlock.agent.yaml.");
@@ -150,21 +158,29 @@ export function collectStatus({ env = process.env, policyPath, cwd = process.cwd
     return status;
   }
 
-  let values = {};
+  // status never prompts (agents run it). A passphrase-protected identity is reported from the
+  // secret names, which SOPS keeps in clear; the plaintext-copy check then runs at `rabbitlock run`.
+  let values = null;
   try {
-    const { privateKey } = keypairFromSeed(loadSeed());
-    values = readSecretsFile(policy.secretsFile, privateKey);
-    status.stored = Object.keys(values).sort();
+    const seed = loadSeedIfUnlocked({ passphrase: env.RABBITLOCK_PASSPHRASE });
+    if (seed) {
+      values = readSecretsFile(policy.secretsFile, keypairFromSeed(seed).privateKey);
+      status.stored = Object.keys(values).sort();
+    } else {
+      status.stored = readSecretNames(policy.secretsFile);
+    }
   } catch (err) {
     status.nextSteps.push(`Could not read ${policy.secretsFile}: ${err.message}`);
     return status;
   }
 
   const listed = Object.keys(policy.secrets);
-  status.missingValues = listed.filter((n) => !(n in values)).sort();
+  status.missingValues = listed.filter((n) => !status.stored.includes(n)).sort();
   status.notInPolicy = status.stored.filter((n) => !listed.includes(n));
-  const brokeredValues = Object.fromEntries(listed.filter((n) => n in values).map((n) => [n, values[n]]));
-  status.plaintextCopies = findPlaintextCopies(path.dirname(policy.path), brokeredValues);
+  if (values) {
+    const brokeredValues = Object.fromEntries(listed.filter((n) => n in values).map((n) => [n, values[n]]));
+    status.plaintextCopies = findPlaintextCopies(path.dirname(policy.path), brokeredValues);
+  }
 
   if (listed.length === 0 && status.stored.length === 0) {
     status.nextSteps.push(
@@ -203,7 +219,10 @@ export function formatStatus(s) {
     out.push(`Brokered: ${s.session.brokered.join(", ") || "none"}`);
   } else {
     out.push("Session: not running under `rabbitlock run`");
-    if (s.identity) out.push(`Identity: ${s.identity.present ? `present (${s.identity.source})` : "missing"}`);
+    if (s.identity) {
+      const detail = s.identity.source === "env" ? "from RABBITLOCK_SEED_HEX" : s.identity.protected ? "passphrase-protected" : "not passphrase-protected; `rabbitlock key protect` adds one";
+      out.push(`Identity: ${s.identity.present ? `present (${detail})` : "missing"}`);
+    }
   }
   if (s.policy?.path) out.push(`Policy: ${s.policy.path}${s.policy.error ? ` (error: ${s.policy.error})` : ""}`);
   if (s.policy?.mode) {

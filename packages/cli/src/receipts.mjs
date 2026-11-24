@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { appendPrivateFile, ensurePrivateDir } from "./paths.mjs";
+
 /**
  * Append-only JSONL receipts. A receipt records which secret was used where, never its value.
  * `values` is used defensively: if a real value ever reaches a receipt field it is redacted.
  */
 export function createReceiptWriter(filePath, session, values) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  ensurePrivateDir(path.dirname(filePath));
   const secretValues = Object.values(values).filter((v) => v.length >= 4);
 
   return (entry) => {
@@ -14,7 +16,7 @@ export function createReceiptWriter(filePath, session, values) {
     for (const value of secretValues) {
       line = line.split(value).join("[REDACTED]");
     }
-    fs.appendFileSync(filePath, `${line}\n`);
+    appendPrivateFile(filePath, `${line}\n`);
   };
 }
 

@@ -6,13 +6,20 @@ import { spawnSync } from "node:child_process";
 
 import { loadLocalCA } from "../src/ca.mjs";
 import {
+  MIN_PASSPHRASE_LENGTH,
   createIdentity,
   identityPath,
   keypairFromSeed,
+  loadPublicKey,
   loadSeed,
+  protectSeed,
+  readIdentity,
+  readSecretNames,
   readSecretsFile,
+  writeIdentity,
   writeSecretsFile,
 } from "../src/crypto.mjs";
+import { readHidden } from "../src/prompt.mjs";
 import { rabbitlockHome } from "../src/paths.mjs";
 import { POLICY_FILENAME, SECRET_NAME_PATTERN, examplePolicy, loadPolicy } from "../src/policy.mjs";
 import { AGENTS_BLOCK, ensureClaudeImport, upsertAgentsBlock } from "../src/agentsmd.mjs";
@@ -42,6 +49,8 @@ Usage:
   rabbitlock rm NAME                  Remove a secret
   rabbitlock ls                       List secret names and their policy
   rabbitlock key                      Print your public key (teammates add it to share secrets)
+  rabbitlock key protect              Encrypt your identity with a passphrase (or change it)
+  rabbitlock key unprotect            Remove the passphrase
   rabbitlock team enable              Share this project's secrets: move them into the repo, encrypted
   rabbitlock team add KEY [--name N]  Give a teammate access (re-encrypts the shared file)
   rabbitlock team remove NAME|KEY     Revoke a teammate's access to future versions
@@ -79,39 +88,24 @@ function takeBool(args, flag) {
   return true;
 }
 
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8").replace(/\r?\n$/, "");
+}
+
 async function readValue(name) {
-  if (!process.stdin.isTTY) {
-    const chunks = [];
-    for await (const chunk of process.stdin) chunks.push(chunk);
-    return Buffer.concat(chunks).toString("utf8").replace(/\r?\n$/, "");
-  }
-  process.stderr.write(`Value for ${name} (hidden): `);
-  return await new Promise((resolve, reject) => {
-    let value = "";
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-    const onData = (ch) => {
-      if (ch === "\r" || ch === "\n" || ch === "\u0004") {
-        cleanup();
-        process.stderr.write("\n");
-        resolve(value);
-      } else if (ch === "\u0003") {
-        cleanup();
-        reject(new Error("Cancelled."));
-      } else if (ch === "\u007f") {
-        value = value.slice(0, -1);
-      } else {
-        value += ch;
-      }
-    };
-    const cleanup = () => {
-      process.stdin.off("data", onData);
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-    };
-    process.stdin.on("data", onData);
-  });
+  if (!process.stdin.isTTY) return await readStdin();
+  return await readHidden(`Value for ${name} (hidden): `);
+}
+
+/** New passphrase: typed twice on a terminal, or one line on stdin for automation. */
+async function readNewPassphrase() {
+  if (!process.stdin.isTTY) return await readStdin();
+  const first = await readHidden(`New passphrase (at least ${MIN_PASSPHRASE_LENGTH} characters): `);
+  const second = await readHidden("Repeat it: ");
+  if (first !== second) throw new Error("The passphrases don't match. Nothing changed.");
+  return first;
 }
 
 async function confirm(question) {
@@ -148,8 +142,7 @@ async function main(argv) {
   switch (command) {
     case "init": {
       const agentsMd = takeBool(args, "--agents-md");
-      const { created, seed } = createIdentity();
-      keypairFromSeed(seed); // fails early on a malformed identity
+      const { created } = createIdentity();
       const ca = loadLocalCA();
       console.log(created ? `Created identity at ${identityPath()}` : `Using existing identity at ${identityPath()}`);
       const target = path.resolve(policyPath ?? POLICY_FILENAME);
@@ -167,6 +160,7 @@ async function main(argv) {
       const mode = loadPolicy(target).mode;
       if (mode === "team") console.log("Add `.rabbitlock/` to .gitignore (receipts live there).");
       console.log("Next: add your secrets' allowed hosts to the policy, then `rabbitlock import .env` or `rabbitlock set NAME`. `rabbitlock status` shows what's left.");
+      if (created) console.log("Optional: `rabbitlock key protect` encrypts your identity with a passphrase, so a copy of the file alone can't decrypt your secrets.");
       return 0;
     }
 
@@ -188,7 +182,7 @@ async function main(argv) {
       const wanted = only ? new Set(only.split(",").map((n) => n.trim()).filter(Boolean)) : null;
 
       const policy = loadPolicy(policyPath);
-      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
+      const { privateKey, publicKey } = keypairFromSeed(await loadSeed());
       const secrets = readSecretsFile(policy.secretsFile, privateKey);
 
       const imported = [];
@@ -254,7 +248,7 @@ async function main(argv) {
       const length = lengthArg === undefined ? DEFAULT_LENGTH : Number(lengthArg);
 
       const policy = loadPolicy(policyPath);
-      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
+      const { privateKey, publicKey } = keypairFromSeed(await loadSeed());
       const secrets = readSecretsFile(policy.secretsFile, privateKey);
 
       let value;
@@ -296,7 +290,7 @@ async function main(argv) {
     case "rm": {
       const name = args.shift();
       const policy = loadPolicy(policyPath);
-      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
+      const { privateKey, publicKey } = keypairFromSeed(await loadSeed());
       const secrets = readSecretsFile(policy.secretsFile, privateKey);
       if (!(name in secrets)) throw new Error(`${name} is not stored.`);
       delete secrets[name];
@@ -307,8 +301,7 @@ async function main(argv) {
 
     case "ls": {
       const policy = loadPolicy(policyPath);
-      const { privateKey } = keypairFromSeed(loadSeed());
-      const stored = Object.keys(readSecretsFile(policy.secretsFile, privateKey));
+      const stored = readSecretNames(policy.secretsFile); // names only: no key or passphrase needed
       const names = [...new Set([...stored, ...Object.keys(policy.secrets)])].sort();
       for (const name of names) {
         const rule = policy.secrets[name];
@@ -319,7 +312,32 @@ async function main(argv) {
     }
 
     case "key": {
-      const { publicKey } = keypairFromSeed(loadSeed());
+      const sub = args.shift();
+      if (sub === "protect" || sub === "unprotect") {
+        if (process.env.RABBITLOCK_SEED_HEX) throw new Error("RABBITLOCK_SEED_HEX is set, so the identity comes from the environment and there is no file to change.");
+        const before = readIdentity();
+        if (sub === "unprotect" && !before.protected) {
+          console.log(`${identityPath()} has no passphrase.`);
+          return 0;
+        }
+        const seed = await loadSeed(); // asks for the current passphrase if there is one
+        if (sub === "unprotect") {
+          writeIdentity(seed);
+          console.log(`Removed the passphrase from ${identityPath()}. The file is owner-only (0600) but unencrypted again.`);
+          return 0;
+        }
+        writeIdentity(protectSeed(seed, await readNewPassphrase()));
+        if (before.protected) {
+          console.log("Passphrase changed.");
+        } else {
+          console.log(`Protected ${identityPath()} with a passphrase.`);
+          console.log("RabbitLock asks for it on your terminal when it needs your key (run, set, import, rm, team). `status`, `ls` and `key` don't.");
+          console.log("There is no recovery: forget it and the secrets encrypted only to you are lost. Keep it in your password manager.");
+        }
+        return 0;
+      }
+      if (sub !== undefined) throw new Error("Usage: rabbitlock key [protect | unprotect]");
+      const publicKey = loadPublicKey();
       console.log(publicKey);
       if (process.stdout.isTTY) {
         console.error("\nYour public key: safe to share. A teammate adds it with `rabbitlock team add <key> --name <you>`.");
@@ -329,8 +347,18 @@ async function main(argv) {
 
     case "team": {
       const sub = args.shift();
-      const { privateKey, publicKey } = keypairFromSeed(loadSeed());
       const usage = "Usage: rabbitlock team enable | add KEY [--name NAME] | remove NAME|KEY | ls";
+      if (sub === "ls" || sub === undefined) {
+        const members = listMembers(policyPath, loadPublicKey());
+        if (members.length === 0) {
+          console.log("Individual mode: only you can decrypt this project's secrets. Run `rabbitlock team enable` to share them.");
+          return 0;
+        }
+        for (const m of members) console.log(`${(m.name ?? "(unnamed)").padEnd(24)} ${fingerprint(m.key)}${m.you ? "  (you)" : ""}`);
+        return 0;
+      }
+      if (!["enable", "add", "remove"].includes(sub)) throw new Error(usage);
+      const { privateKey, publicKey } = keypairFromSeed(await loadSeed());
       if (sub === "enable") {
         const policy = loadPolicy(policyPath);
         const name = takeFlag(args, "--name") ?? gitUserName() ?? os.userInfo().username;
@@ -357,15 +385,6 @@ async function main(argv) {
         if (secrets.length > 0) {
           console.log(`They can still decrypt older versions from git history: rotate ${secrets.join(", ")} at each provider, then \`rabbitlock set\` the new values.`);
         }
-        return 0;
-      }
-      if (sub === "ls" || sub === undefined) {
-        const members = listMembers(policyPath, publicKey);
-        if (members.length === 0) {
-          console.log("Individual mode: only you can decrypt this project's secrets. Run `rabbitlock team enable` to share them.");
-          return 0;
-        }
-        for (const m of members) console.log(`${(m.name ?? "(unnamed)").padEnd(24)} ${fingerprint(m.key)}${m.you ? "  (you)" : ""}`);
         return 0;
       }
       throw new Error(usage);
