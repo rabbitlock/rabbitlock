@@ -3,7 +3,7 @@ title: Roadmap
 description: What RabbitLock does today, what comes next, and in what order. Nothing here is shipped until a release says so.
 ---
 
-RabbitLock is **one credential policy, approval and receipt layer for every coding agent**. Today it enforces the policy with its own local proxy. The roadmap adds the same policy on top of each agent platform's built-in credential features, evidence a security team can rely on, and the engineering needed for 1.0.
+RabbitLock is **one credential policy, approval and receipt layer for every coding agent**. Today it enforces the policy with its own local proxy. The roadmap applies the same policy through each agent platform's built-in credential features, evidence a security team can rely on, and the engineering needed for 1.0.
 
 Planned items have no dates. They ship in the order below, and the [changelog](/changelog) records what actually shipped.
 
@@ -15,37 +15,31 @@ Planned items have no dates. They ship in the order below, and the [changelog](/
 - Encrypted storage (post-quantum hybrid SOPS), on your machine or shared with teammates through git; optional passphrase
 - Agent-led setup, generated secrets the agent never sees, `.env` import
 
-## 1. Check which platforms can be driven
+## 1. Check which platforms can be driven (done, 2026-11-24)
 
-Several agent platforms now keep credentials out of the agent themselves, each configured differently. Before building adapters, we check which of them can be set up from a file or an API, what they log, and whether a use can wait for an approval:
+We checked 17 agent platforms' built-in credential features against vendor documentation, and tested Claude Code and Codex by hand. Results: [integration matrix](/reference/integration-matrix).
 
-- Claude Code, locally and in cloud sessions
-- Claude Managed Agents
-- Codex and the OpenAI Agents API
-- Docker sandboxes
-- E2B, Daytona, Vercel and Cloudflare sandboxes
-- GitHub Copilot's cloud agent
-- Cursor
-
-The results will be published as an integration matrix.
+- Five platforms can be configured end to end from a file or an API, secret and hosts: Claude Code CLI, Codex CLI, Claude Managed Agents, the OpenAI Agents API and Daytona. Adapters go ahead.
+- None records each use of a credential or lets an outside approver hold one. Through a platform's built-in feature, RabbitLock can apply one policy and detect drift. Per-use approvals and receipts need RabbitLock's own proxy.
+- Claude Code on the web and Codex cloud are configured only in their UIs, and Copilot, Cursor and Devin give the agent the real value.
 
 ## 2. Policy v2 and platform adapters
 
 - Rules per HTTP method and path, not just per host.
-- `rabbitlock plan` and `rabbitlock apply` configure a platform's built-in credential feature from your policy.
+- `rabbitlock plan` and `rabbitlock apply` configure a platform's built-in credential feature from your policy. First: Claude Code CLI, Codex CLI and Claude Managed Agents. Next: Daytona, the OpenAI Agents API and Docker Sandboxes.
 - `rabbitlock check` reports where a platform's configuration has drifted from the policy.
 - RabbitLock's own proxy stays the fallback wherever a platform has no built-in feature.
 
 ## 3. Verifiable receipts
 
-- One receipt format across the proxy and every adapter.
+- One receipt format across the proxy and every adapter. For platforms that don't log each use, adapters record what was configured, where and when.
 - Receipts are hash-chained and signed. `rabbitlock receipts verify` detects edits, deletions and reordering.
 - Export to OpenTelemetry and OCSF for security tools.
 
 ## 4. Approvals beyond the desktop dialog
 
 - Terminal and webhook/Slack approvals, with timeouts that deny by default.
-- Approvals on platforms that expose a hook for them.
+- Approvals on platforms that expose a hook for them. Today those hooks approve a tool call or a new host, not a single use of a key.
 
 ## 5. Proxy hardening
 

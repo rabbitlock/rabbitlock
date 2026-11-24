@@ -1,1 +1,1 @@
-{ "pages": ["cli", "policy", "environment", "receipt-format", "compatibility", "limits"] }
+{ "pages": ["cli", "policy", "environment", "receipt-format", "compatibility", "integration-matrix", "limits"] }
