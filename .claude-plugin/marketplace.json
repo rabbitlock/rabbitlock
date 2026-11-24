@@ -1,0 +1,12 @@
+{
+  "name": "rabbitlock",
+  "owner": { "name": "Rabbitlock Inc.", "url": "https://rabbitlock.com" },
+  "description": "RabbitLock: coding agents use your API keys without ever seeing them.",
+  "plugins": [
+    {
+      "name": "rabbitlock",
+      "source": "./plugins/rabbitlock",
+      "description": "Set up RabbitLock in a project: install the CLI, propose a credential policy, and hand secret entry to the user."
+    }
+  ]
+}

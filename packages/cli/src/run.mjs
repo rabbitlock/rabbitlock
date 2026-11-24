@@ -9,6 +9,7 @@ import { rabbitlockHome } from "./paths.mjs";
 import { makePlaceholders } from "./placeholders.mjs";
 import { startProxy } from "./proxy.mjs";
 import { createReceiptWriter } from "./receipts.mjs";
+import { findPlaintextCopies } from "./status.mjs";
 import { planSandbox, protectedPaths } from "./sandbox.mjs";
 
 /**
@@ -72,7 +73,7 @@ export function planLaunch(command, args, paths, { mode, hideProcesses }) {
  * - any other variable whose value equals a brokered secret is removed
  * - proxy + CA trust variables point tools at the broker
  */
-export function buildChildEnv(parentEnv, { placeholders, values, proxyUrl, ca, session }) {
+export function buildChildEnv(parentEnv, { placeholders, values, proxyUrl, ca, session, sandbox = "unknown" }) {
   const realValues = new Set(Object.values(values).filter((v) => v.length > 0));
   const env = {};
   for (const [key, value] of Object.entries(parentEnv)) {
@@ -96,6 +97,7 @@ export function buildChildEnv(parentEnv, { placeholders, values, proxyUrl, ca, s
     GIT_SSL_CAINFO: ca.bundlePath,
     RABBITLOCK_ACTIVE: "1",
     RABBITLOCK_SESSION: session,
+    RABBITLOCK_SANDBOX: sandbox,
   });
   return env;
 }
@@ -143,7 +145,13 @@ export async function runBrokered(policy, command, args, { quiet = false, sandbo
     );
   }
 
-  const env = buildChildEnv(process.env, { placeholders, values, proxyUrl: proxy.url, ca, session });
+  for (const copy of findPlaintextCopies(path.dirname(policy.path), values)) {
+    process.stderr.write(
+      `rabbitlock: WARNING: ${copy.file} contains the real value of ${copy.secrets.join(", ")}, and the agent can read it. Delete it or remove those lines.\n`,
+    );
+  }
+
+  const env = buildChildEnv(process.env, { placeholders, values, proxyUrl: proxy.url, ca, session, sandbox: launch.sandbox });
 
   return await new Promise((resolve, reject) => {
     const child = spawn(launch.command, launch.args, { stdio: "inherit", env });

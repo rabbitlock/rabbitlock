@@ -4,9 +4,21 @@
 
 RabbitLock is a credential broker for coding agents. It's set up for Claude Code out of the box, and works with other agents whose tools honour standard proxy settings. The agent's environment holds placeholders. A local proxy swaps in the real credential only on outbound HTTPS requests to hosts your policy allows. Sensitive secrets can require a human approval, and every use leaves a receipt that never contains the value.
 
+**Let your agent set it up.** Paste this into Claude Code, Codex, OpenCode or any agent that can read the web:
+
+```text
+Set up RabbitLock for this project: read https://rabbitlock.com/agents.md and follow it.
+```
+
+In Claude Code, you can install the setup skill instead: `/plugin install rabbitlock --marketplace rabbitlock/rabbitlock`. The agent installs and configures everything. You approve the policy, type the secrets in your own terminal, and restart the agent under RabbitLock.
+
+**Or do it yourself:**
+
 ```bash
-rabbitlock init
-echo -n "$TOKEN" | rabbitlock set GITHUB_TOKEN
+npm install -g @rabbitlock/cli
+rabbitlock init --agents-md
+rabbitlock import .env          # or: rabbitlock set GITHUB_TOKEN
+rabbitlock status               # what's missing, what's next
 rabbitlock run -- claude
 rabbitlock receipts
 ```
@@ -37,7 +49,8 @@ Documentation: [rabbitlock.com/docs](https://rabbitlock.com/docs) (source in [`d
 
 - `packages/cli`: the `rabbitlock` CLI and broker (Node ≥ 20, no build step).
 - `packages/crypto-wasm`: crypto core (Rust → WebAssembly), bundled into the CLI.
-- `docs`: the documentation site (Fumadocs, static export served at `rabbitlock.com/docs`).
+- `docs`: the documentation site (Fumadocs, static export served at `rabbitlock.com/docs`). `docs/public/agents.md` holds the agent setup instructions.
+- `plugins/rabbitlock`: the Claude Code plugin (setup skill). Keep it in sync with `node scripts/sync-agent-skill.mjs`.
 
 ```bash
 npm install

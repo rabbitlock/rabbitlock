@@ -12,13 +12,14 @@ Global option: `--policy PATH` uses a specific policy file. Without it, RabbitLo
 ## `init`
 
 ```bash
-rabbitlock init
+rabbitlock init [--agents-md]
 ```
 
 - Creates `~/.rabbitlock/identity` (mode `0600`) if it doesn't exist. An existing identity is never overwritten.
 - Creates the local CA in `~/.rabbitlock/ca/` if needed.
 - Writes an example `rabbitlock.agent.yaml`, unless one already exists, with your public key as the first recipient.
 - Prints your public key and the CA certificate path.
+- `--agents-md`: adds (or updates) a RabbitLock section in `AGENTS.md` telling coding agents how to use placeholders and what to ask you for. If `CLAUDE.md` exists, adds an `@AGENTS.md` line so Claude Code reads it too.
 
 ## `set NAME`
 
@@ -56,6 +57,32 @@ Exactly one of `--reveal`, `--to-command` or `--no-handoff` is required. Generat
 ## `rm NAME`
 
 Removes `NAME` from the secrets file and re-encrypts. It's an error if `NAME` isn't stored.
+
+## `import FILE`
+
+```bash
+rabbitlock import .env [--only NAME,NAME] [--force] [--delete]
+```
+
+Encrypts every valid entry of a `.env` file into the secrets file. It never prints values.
+
+- **Supported syntax:** `KEY=value`, `export KEY=value`, double-quoted (with `\n` escapes, may span lines) and single-quoted values, `#` comments.
+- **Skipped:** names that don't match `^[A-Z][A-Z0-9_]*$`, empty values, unparseable lines (reported by line number), and secrets already stored with a different value unless `--force`.
+- **Not in the policy:** prints a stub for each imported name that has no allowed hosts yet.
+- **`--delete`:** removes the file after a clean import. It's kept if anything was skipped for a conflict or a parse error. Without `--delete`, RabbitLock reminds you that the file still holds plaintext values the agent can read.
+
+## `status`
+
+```bash
+rabbitlock status [--json]
+```
+
+Shows the setup state and the next steps, never values.
+
+- **Outside a session:** identity, policy, which secrets are stored, missing values, stored secrets with no policy, `.env` files that still contain a brokered value, sandbox availability.
+- **Inside a session** (run by the agent): `session.active`, the session id, the sandbox in use, and which environment variables hold placeholders. The identity is unreadable there by design, so `stored` is `null`.
+
+`--json` is meant for agents and scripts; the fields are `version`, `session`, `identity`, `policy`, `stored`, `missingValues`, `notInPolicy`, `plaintextCopies`, `sandbox` and `nextSteps`.
 
 ## `ls`
 

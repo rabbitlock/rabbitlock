@@ -1,0 +1,39 @@
+---
+title: Set up with your agent
+description: Tell your coding agent to set up RabbitLock. It installs and configures everything except the parts only you should do.
+---
+
+Instead of following the [quickstart](/quickstart) yourself, you can ask your coding agent to do the setup. Paste this into Claude Code, Codex, OpenCode, Cursor or any other agent that can read web pages and run commands:
+
+```text
+Set up RabbitLock for this project: read https://rabbitlock.com/agents.md and follow it.
+```
+
+In Claude Code you can install the setup skill instead, after which "set up RabbitLock" is enough:
+
+```text
+/plugin install rabbitlock --marketplace rabbitlock/rabbitlock
+```
+
+On Claude Code versions before 2.1.275, add the marketplace first: `/plugin marketplace add rabbitlock/rabbitlock`, then `/plugin install rabbitlock@rabbitlock`.
+
+## What the agent does
+
+1. Checks Node.js and, on Linux, `bubblewrap`. It asks you before installing anything with `sudo`.
+2. Installs the CLI and runs `rabbitlock init --agents-md`, which also adds instructions for future agent sessions to `AGENTS.md`.
+3. Finds the credentials your project uses, by name only, and works out which hosts each one is sent to.
+4. Shows you a proposed `rabbitlock.agent.yaml` and writes it after you agree.
+5. Gives you the commands to store the values, and checks the result with `rabbitlock status`.
+6. Tells you how to restart it under RabbitLock.
+
+The full instructions it follows are public: [rabbitlock.com/agents.md](https://rabbitlock.com/agents.md).
+
+## What stays with you, by design
+
+- **Typing the secrets.** You run `rabbitlock import .env` or `rabbitlock set NAME` in your own terminal. If the agent collected the values, it would have seen them.
+- **Approving the policy.** The policy decides which hosts receive each real credential. The agent proposes it; you decide. Inside a RabbitLock session, the sandbox stops the agent from editing it.
+- **Restarting the agent.** An agent can't put itself under RabbitLock mid-session. Exit and start it again with `rabbitlock run -- <agent>`.
+
+## After the restart
+
+The agent can check its own setup with `rabbitlock status` (or `--json`): whether it's running under RabbitLock, which variables hold placeholders, and their allowed hosts. The `AGENTS.md` instructions tell it how to use placeholders, what a RabbitLock `403` means, and to ask you, never the chat, for new secrets.

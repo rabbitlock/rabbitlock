@@ -7,8 +7,9 @@ Your coding agent uses your API keys without ever seeing them.
 ```bash
 npm install -g @rabbitlock/cli
 
-rabbitlock init                                  # identity + rabbitlock.agent.yaml
-echo -n "$TOKEN" | rabbitlock set GITHUB_TOKEN   # stored encrypted
+rabbitlock init --agents-md                      # identity, rabbitlock.agent.yaml, AGENTS.md
+rabbitlock import .env                           # or: echo -n "$TOKEN" | rabbitlock set GITHUB_TOKEN
+rabbitlock status                                # what's missing, what's next
 rabbitlock run -- claude                         # agent sees rl_ph_GITHUB_TOKEN_…
 rabbitlock receipts                              # what was used, where
 
@@ -17,6 +18,8 @@ rabbitlock set ADMIN_PASSWORD --generate --reveal
 ```
 
 Requires Node.js 20+, on macOS or Linux.
+
+Or let your agent set it up: "Set up RabbitLock for this project: read https://rabbitlock.com/agents.md and follow it."
 
 - Documentation: https://rabbitlock.com/docs
 - Source, issues and security policy: https://github.com/rabbitlock/rabbitlock

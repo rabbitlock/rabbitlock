@@ -1,1 +1,1 @@
-{ "pages": ["claude-code", "other-agents", "approvals", "provisioning", "teams", "macos-ca-trust"] }
+{ "pages": ["agent-setup", "claude-code", "other-agents", "approvals", "provisioning", "teams", "macos-ca-trust"] }

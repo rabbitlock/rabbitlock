@@ -56,10 +56,13 @@ jobs:
 
       - run: npm ci
 
+      - name: Agent skill matches agents.md
+        run: node ../scripts/sync-agent-skill.mjs --check
+
       - run: npm run build
 
       - name: Check key routes exist
         run: |
-          for f in index.html quickstart.html concepts/how-it-works.html reference/cli.html security.html llms.txt api/search; do
+          for f in index.html quickstart.html concepts/how-it-works.html reference/cli.html security.html llms.txt agents.md guides/agent-setup.html api/search; do
             test -e "out/$f" || { echo "missing out/$f"; exit 1; }
           done
