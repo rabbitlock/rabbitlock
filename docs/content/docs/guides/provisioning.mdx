@@ -1,0 +1,99 @@
+---
+title: Let your agent set up accounts
+description: Generate a password or secret the agent uses to create an admin account or configure a service, without the agent ever seeing it.
+---
+
+Agents increasingly do setup work, not just use existing credentials: creating the first admin of a new service, setting a database password, registering a webhook secret on both ends. That normally leaves two bad options: the agent sees the password, or it stops and asks you to do the steps by hand.
+
+With `rabbitlock set --generate`, RabbitLock creates the value, gives it to you (or to nobody), and the agent only ever handles a placeholder. RabbitLock fills in the real value on requests to the hosts you allow.
+
+This works for anything set up **over HTTPS**: a setup API, a sign-up endpoint, an admin API that creates users or keys. It doesn't cover setup done over SSH, by commands run on a server, or through a browser. See [What it doesn't cover](#what-it-doesnt-cover).
+
+<Steps>
+<Step>
+
+### Add the secret to your policy
+
+Allow it only for the service that should receive it:
+
+```yaml title="rabbitlock.agent.yaml"
+secrets:
+  METRICS_ADMIN_PASSWORD:
+    hosts: [metrics.example.com]
+    approval: once
+```
+
+`approval: once` shows you a dialog the first time the agent uses it in a session, which is a good fit for one-off setup.
+
+</Step>
+<Step>
+
+### Generate it yourself
+
+Run this in your own terminal, not through the agent:
+
+```bash
+rabbitlock set METRICS_ADMIN_PASSWORD --generate --reveal
+```
+
+You choose exactly one way to receive the value:
+
+| Option | What happens |
+| --- | --- |
+| `--reveal` | Printed once in your terminal. Refused if the output is being captured, for example when an agent runs the command. |
+| `--to-command 'CMD'` | Piped to `CMD`'s standard input, for example a password manager. The value is never put in a command line. Nothing is stored if `CMD` fails. |
+| `--no-handoff` | Nobody sees it. Use this for secrets only machines need, such as a webhook signing secret the agent sets on both ends. |
+
+For example, to save it straight into [`pass`](https://www.passwordstore.org/):
+
+```bash
+rabbitlock set METRICS_ADMIN_PASSWORD --generate --to-command 'pass insert -m metrics/admin'
+```
+
+The value is 32 letters and digits by default (about 190 bits). Use `--length` (16 to 256) and `--charset alnum|hex|base64url|symbols` for systems with password rules. `symbols` always includes at least one symbol.
+
+</Step>
+<Step>
+
+### Start (or restart) the agent
+
+```bash
+rabbitlock run -- claude
+```
+
+Secrets are loaded when a session starts, so restart a running session to pick up a new one. The agent's environment now has `METRICS_ADMIN_PASSWORD=rl_ph_METRICS_ADMIN_PASSWORD_…`.
+
+</Step>
+<Step>
+
+### The agent sets it up
+
+The agent calls the service's setup API with the placeholder, for example:
+
+```bash
+curl https://metrics.example.com/api/setup \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"admin@example.com\",\"password\":\"$METRICS_ADMIN_PASSWORD\"}"
+```
+
+RabbitLock replaces the placeholder in the JSON body (escaped correctly) and forwards the request. The same placeholder sent to any other host stays a useless string. The receipt records that `METRICS_ADMIN_PASSWORD` was used on `POST metrics.example.com/api/setup`.
+
+</Step>
+</Steps>
+
+## Why the agent can't just read it
+
+- The agent's environment, output and transcript only ever contain the placeholder.
+- Inside a sandboxed `rabbitlock run` session, the agent can't read your identity, so it can't decrypt the secrets file or run `rabbitlock set` itself.
+- `--reveal` refuses to print when its output is captured, so an agent that runs the command outside a session still doesn't get the value. Generation also leaves a `generated` receipt (with no value).
+
+## Replacing a value
+
+Generating over an existing secret is refused, because anything still using the old value would break. Re-run with `--force` when you mean it, for example after rotating the password in the service.
+
+## What it doesn't cover
+
+- **Setup over SSH or on the server itself** (a command that creates a user, a config file). RabbitLock only handles HTTPS requests from the agent's machine.
+- **Browser forms.** When an agent drives a browser, that traffic doesn't go through RabbitLock.
+- **Getting the value back later.** There is no `rabbitlock get`. If you'll need the password yourself, use `--reveal` or `--to-command`.
+- **Services that transform the password in the browser** before sending it, or that only accept it in a format RabbitLock doesn't rewrite. See the [limits](/reference/limits) for supported request types.

@@ -13,7 +13,8 @@ import {
   writeSecretsFile,
 } from "../src/crypto.mjs";
 import { POLICY_FILENAME, SECRET_NAME_PATTERN, examplePolicy, loadPolicy } from "../src/policy.mjs";
-import { readReceipts } from "../src/receipts.mjs";
+import { DEFAULT_LENGTH, entropyBits, generateSecret, handOff, parseHandoff } from "../src/generate.mjs";
+import { createReceiptWriter, readReceipts } from "../src/receipts.mjs";
 import { runBrokered } from "../src/run.mjs";
 import { SANDBOX_MODES } from "../src/sandbox.mjs";
 
@@ -25,6 +26,9 @@ outbound HTTPS requests to hosts your policy allows, and records a receipt.
 Usage:
   rabbitlock init                     Create your identity and ${POLICY_FILENAME}
   rabbitlock set NAME                 Encrypt a secret (value from stdin or prompt)
+  rabbitlock set NAME --generate (--reveal | --to-command CMD | --no-handoff)
+                [--length N] [--charset alnum|hex|base64url|symbols] [--force]
+                                      Create a random secret the agent can use but never see
   rabbitlock rm NAME                  Remove a secret
   rabbitlock ls                       List secret names and their policy
   rabbitlock run [--sandbox auto|on|off] [--quiet] -- CMD...
@@ -136,18 +140,58 @@ async function main(argv) {
     }
 
     case "set": {
+      const generate = takeBool(args, "--generate");
+      const reveal = takeBool(args, "--reveal");
+      const noHandoff = takeBool(args, "--no-handoff");
+      const force = takeBool(args, "--force");
+      const toCommand = takeFlag(args, "--to-command");
+      const lengthArg = takeFlag(args, "--length");
+      const charset = takeFlag(args, "--charset") ?? "alnum";
       const name = args.shift();
       if (!name || !SECRET_NAME_PATTERN.test(name)) {
-        throw new Error(`Usage: rabbitlock set NAME  (NAME must match ${SECRET_NAME_PATTERN})`);
+        throw new Error(`Usage: rabbitlock set NAME [--generate ...]  (NAME must match ${SECRET_NAME_PATTERN})`);
       }
+      if (args.length > 0) throw new Error(`Unexpected arguments: ${args.join(" ")}`);
+      if (!generate && (reveal || noHandoff || toCommand !== undefined || lengthArg !== undefined || force)) {
+        throw new Error("--reveal, --to-command, --no-handoff, --length and --force only apply with --generate.");
+      }
+      const handoff = generate ? parseHandoff({ reveal, toCommand, noHandoff }) : null;
+      const length = lengthArg === undefined ? DEFAULT_LENGTH : Number(lengthArg);
+
       const policy = loadPolicy(policyPath);
       const { privateKey, publicKey } = keypairFromSeed(loadSeed());
       const secrets = readSecretsFile(policy.secretsFile, privateKey);
-      const value = await readValue(name);
-      if (!value) throw new Error("Refusing to store an empty value.");
+
+      let value;
+      if (generate) {
+        if (name in secrets && !force) {
+          throw new Error(
+            `${name} is already stored. Replacing it breaks anything still using the old value; re-run with --force if that's intended.`,
+          );
+        }
+        value = generateSecret({ length, charset });
+        handOff(value, handoff);
+      } else {
+        value = await readValue(name);
+        if (!value) throw new Error("Refusing to store an empty value.");
+      }
+
       secrets[name] = value;
       writeSecretsFile(policy.secretsFile, secrets, recipientsFor(policy, publicKey));
-      console.log(`Stored ${name} in ${path.relative(process.cwd(), policy.secretsFile)}`);
+      const where = path.relative(process.cwd(), policy.secretsFile);
+      if (generate) {
+        createReceiptWriter(policy.receipts, "cli", { [name]: value })({
+          decision: "generated",
+          secrets: [name],
+          command: `set --generate (${charset}, ${length} chars, handoff: ${handoff.mode})`,
+        });
+        console.log(`Generated ${name} (${length} chars, ${charset}, ~${entropyBits(length, charset)} bits) and stored it in ${where}`);
+        if (handoff.mode === "command") console.log("Handed off to --to-command.");
+        if (handoff.mode === "none") console.log("Not shown to anyone. Agents can use it through RabbitLock; it cannot be read back.");
+        console.log("Agents receive a placeholder for it. Restart any running `rabbitlock run` session to pick it up.");
+      } else {
+        console.log(`Stored ${name} in ${where}`);
+      }
       if (!policy.secrets[name]) {
         console.log(`Note: ${name} is not in ${path.basename(policy.path)} yet, so agents will not receive it. Add hosts for it.`);
       }
