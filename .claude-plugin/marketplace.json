@@ -1,7 +1,7 @@
 {
   "name": "rabbitlock",
   "owner": { "name": "Rabbitlock Inc.", "url": "https://rabbitlock.com" },
-  "description": "RabbitLock: coding agents use your API keys without ever seeing them.",
+  "description": "RabbitLock: one credential policy for every coding agent. The agent only holds placeholders.",
   "plugins": [
     {
       "name": "rabbitlock",

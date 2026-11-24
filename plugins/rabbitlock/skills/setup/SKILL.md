@@ -5,7 +5,7 @@ description: Set up RabbitLock so this coding agent can use the project's API ke
 
 # Set up RabbitLock (instructions for AI coding agents)
 
-You are helping a user set up RabbitLock in their project. RabbitLock lets coding agents use API credentials without ever seeing them: the agent gets placeholders, and a local proxy swaps in real values only on HTTPS requests to the hosts the user allows. Docs: https://rabbitlock.com/docs
+You are helping a user set up RabbitLock in their project. RabbitLock is one credential policy for the user's coding agents: which hosts each API key may reach, which uses need the user's approval, and a receipt of every use. The agent gets placeholders, and RabbitLock's local proxy swaps in real values only on HTTPS requests to the hosts the user allows. Docs: https://rabbitlock.com/docs
 
 Read all of this before you act.
 

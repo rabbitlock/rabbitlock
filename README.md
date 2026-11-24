@@ -1,8 +1,10 @@
 # RabbitLock
 
-**Your coding agent can use your API keys without ever seeing them.**
+**One credential policy for every coding agent.**
 
-RabbitLock is a credential broker for coding agents. It's set up for Claude Code out of the box, and works with other agents whose tools honour standard proxy settings. The agent's environment holds placeholders. A local proxy swaps in the real credential only on outbound HTTPS requests to hosts your policy allows. Sensitive secrets can require a human approval, and every use leaves a receipt that never contains the value.
+One file says which hosts each API key may reach and which uses need your approval. RabbitLock enforces it, and every use leaves a receipt that never contains the value. The agent only ever holds placeholders.
+
+Today RabbitLock enforces the policy with its own local proxy. That works for Claude Code out of the box and for any other agent whose tools honour standard proxy settings: the real credential is swapped in only on outbound HTTPS requests to allowed hosts. Applying the same policy through each agent platform's built-in credential features is next on the [roadmap](https://rabbitlock.com/docs/roadmap).
 
 **Let your agent set it up.** Paste this into Claude Code, Codex, OpenCode or any agent that can read the web:
 
@@ -33,7 +35,7 @@ secrets:
     approval: once
 ```
 
-**Individual or team.** By default your encrypted secrets stay on your machine (`~/.rabbitlock/projects/…`); the policy file is the only thing in the repo. To share secrets with teammates, run `rabbitlock team enable`, then `rabbitlock team add <their key> --name ana`. That puts the encrypted file in the repo, readable only by the people you add. See [Teams](https://rabbitlock.com/docs/guides/teams). Hosted team features and enterprise controls: [rabbitlock.com/plans](https://rabbitlock.com/plans).
+**Individual or team.** By default your encrypted secrets stay on your machine (`~/.rabbitlock/projects/…`); the policy file is the only thing in the repo. To share secrets with teammates, run `rabbitlock team enable`, then `rabbitlock team add <their key> --name ana`. That puts the encrypted file in the repo, readable only by the people you add. See [Teams](https://rabbitlock.com/docs/guides/teams). Team and enterprise plans: [rabbitlock.com/plans](https://rabbitlock.com/plans).
 
 **Agents that set things up, not just use them:** `rabbitlock set ADMIN_PASSWORD --generate --reveal` creates a random secret and shows it once to you, not the agent. Use `--to-command` to send it to a password manager, or `--no-handoff` so nobody sees it. The agent can then create an admin account or configure a service through its API, using a credential it never sees. See [Let your agent set up accounts](https://rabbitlock.com/docs/guides/provisioning).
 
@@ -59,7 +61,7 @@ npm install
 npm test            # CLI tests (needs curl) + cargo test
 ```
 
-The hosted team product (shared policy, central receipts, approvals, CI delivery) is a separate commercial service at [rabbitlock.com](https://rabbitlock.com).
+What's planned, and in what order: [roadmap](https://rabbitlock.com/docs/roadmap).
 
 ## License
 

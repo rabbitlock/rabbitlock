@@ -1,6 +1,6 @@
 # @rabbitlock/cli
 
-Your coding agent uses your API keys without ever seeing them.
+One credential policy for every coding agent: where each API key may go, which uses need your approval, and a receipt of every use. The agent only ever holds placeholders.
 
 `rabbitlock run -- <agent>` starts your agent with placeholders instead of real credentials. A local proxy swaps in the real value only on outbound requests to the hosts you allow, asks you first for secrets you mark as sensitive, and records a receipt of every use (never the value). The agent is sandboxed so it can't read RabbitLock's own key files.
 
