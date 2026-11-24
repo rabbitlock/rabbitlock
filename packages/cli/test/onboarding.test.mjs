@@ -128,7 +128,9 @@ test("CLI: init --agents-md, import, and status walk a new project to ready", as
   assert.match(imp.stdout, /still holds the plaintext values/);
   for (const v of Object.values(real)) assert.ok(!imp.stdout.includes(v) && !imp.stderr.includes(v), "import never prints values");
   const { privateKey } = keypairFromSeed(fs.readFileSync(path.join(home, "identity"), "utf8").trim());
-  assert.deepEqual(readSecretsFile(path.join(dir, "secrets.sops.json"), privateKey), real);
+  const project = /^project: (\S+)$/m.exec(fs.readFileSync(path.join(dir, "rabbitlock.agent.yaml"), "utf8"))[1];
+  assert.deepEqual(readSecretsFile(path.join(home, "projects", project, "secrets.sops.json"), privateKey), real);
+  assert.ok(!fs.existsSync(path.join(dir, "secrets.sops.json")), "individual mode keeps secrets out of the repo");
 
   // Re-import with a changed value is refused without --force.
   fs.writeFileSync(path.join(dir, ".env.new"), "GITHUB_TOKEN=changed-value-123456\n");

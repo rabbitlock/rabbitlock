@@ -16,7 +16,8 @@ RabbitLock is designed against one adversary first: **a coding agent that has be
 | The token is placed in a request body | **Protected** | JSON, form and text bodies up to 1 MiB get the same host checks; others carry only the placeholder |
 | The agent reads your key file or the CA key | **Protected** | [Agent sandbox](/concepts/sandbox); not with `--sandbox off` or where no sandbox is available (RabbitLock warns) |
 | The agent edits the policy or forges receipts | **Protected** | Read-only inside the sandbox |
-| The agent reads the broker's environment (`RABBITLOCK_SEED_HEX`) | **Protected** | The sandbox hides other processes when the seed comes from the environment |
+| The agent reads the broker's environment (`RABBITLOCK_SEED_HEX`, `RABBITLOCK_PASSPHRASE`) | **Protected** | The sandbox hides other processes when key material comes from the environment |
+| Another program running as you copies `~/.rabbitlock/identity` | **Protected, if you opt in** | `rabbitlock key protect` encrypts it with a passphrase. Without one, file permissions don't stop programs running as you |
 | A sensitive key is used without anyone knowing | **Protected** | `approval` per secret; every use is receipted |
 | The encrypted secrets file is tampered with | **Protected** | Integrity is checked on every read; the run stops |
 | The machine has no usable sandbox | **Your part** | Install `bubblewrap` on Linux; use `--sandbox on` to refuse |
@@ -30,7 +31,8 @@ Every **Protected** row is covered by automated tests in [`packages/cli/test`](h
 
 | File | Sensitivity |
 | --- | --- |
-| `~/.rabbitlock/identity` | Decrypts your secrets. Owner-only; denied to the agent. |
+| `~/.rabbitlock/identity` | Decrypts your secrets. Owner-only; denied to the agent; optionally passphrase-encrypted (`rabbitlock key protect`). |
+| `~/.rabbitlock/projects/*/secrets.sops.json`, receipts | Encrypted secrets, and records of use without values. Owner-only. |
 | `~/.rabbitlock/ca/rabbitlock-ca.key` | Can impersonate websites to programs that trust the CA. Owner-only; denied to the agent. |
 | `~/.rabbitlock/ca/rabbitlock-ca.pem`, `bundle.pem` | Public; tools read them to verify TLS. |
 

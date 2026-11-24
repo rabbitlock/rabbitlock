@@ -15,10 +15,10 @@ Global option: `--policy PATH` uses a specific policy file. Without it, RabbitLo
 rabbitlock init [--agents-md]
 ```
 
-- Creates `~/.rabbitlock/identity` (mode `0600`) if it doesn't exist. An existing identity is never overwritten.
+- Creates `~/.rabbitlock/identity` (mode `0600`) if it doesn't exist. An existing identity is never overwritten, and a passphrase-protected one isn't unlocked.
 - Creates the local CA in `~/.rabbitlock/ca/` if needed.
-- Writes an example `rabbitlock.agent.yaml`, unless one already exists, with your public key as the first recipient.
-- Prints your public key and the CA certificate path.
+- Writes an example `rabbitlock.agent.yaml` with a new `project` id, unless one already exists.
+- Prints the CA certificate path.
 - `--agents-md`: adds (or updates) a RabbitLock section in `AGENTS.md` telling coding agents how to use placeholders and what to ask you for. If `CLAUDE.md` exists, adds an `@AGENTS.md` line so Claude Code reads it too.
 
 ## `set NAME`
@@ -84,9 +84,41 @@ Shows the setup state and the next steps, never values.
 
 `--json` is meant for agents and scripts; the fields are `version`, `session`, `identity`, `policy`, `stored`, `missingValues`, `notInPolicy`, `plaintextCopies`, `sandbox` and `nextSteps`.
 
+## `key`
+
+```bash
+rabbitlock key               # print your public key
+rabbitlock key protect       # encrypt your identity with a passphrase, or change it
+rabbitlock key unprotect     # remove the passphrase
+```
+
+- **`key`** prints your public key. It's safe to share: a teammate adds it with `rabbitlock team add`. It never needs the passphrase.
+- **`key protect`** encrypts `~/.rabbitlock/identity` with a passphrase (scrypt, then AES-256-GCM). The new passphrase is typed twice, or read as one line from stdin for automation. It must be at least 12 characters. If the identity already has one, it asks for the current passphrase first.
+- **`key unprotect`** asks for the passphrase and writes the plain identity back (still mode `0600`).
+
+With a passphrase, commands that need your private key (`run`, `set`, `import`, `rm`, `team enable|add|remove`) ask for it on your terminal, with three attempts. `status`, `ls`, `key` and `team ls` don't need it. Without a terminal, for example in an agent's shell, those commands fail with a clear message instead of waiting. For automation, set `RABBITLOCK_PASSPHRASE`.
+
+There's no recovery: if you forget the passphrase, secrets encrypted only to you are lost. Keep it in your password manager.
+
+## `team`
+
+```bash
+rabbitlock team enable [--name NAME]
+rabbitlock team add KEY [--name NAME]
+rabbitlock team remove NAME|KEY
+rabbitlock team ls
+```
+
+- **`enable`:** switches the project from individual to team mode. It moves the encrypted secrets from `~/.rabbitlock/projects/<project>/` into `secrets.sops.json` next to the policy, sets `secrets_file`, and lists you as a named recipient (default name: your git `user.name`). It refuses if team mode is already on or `secrets.sops.json` already exists.
+- **`add`:** adds a recipient and re-encrypts. A malformed key changes nothing.
+- **`remove`:** removes a recipient by name or key (or a unique key prefix) and re-encrypts, then lists the secrets to rotate. You can't remove yourself.
+- **`ls`:** who can decrypt; `(you)` marks your key. In individual mode it says so.
+
+The other `team` commands need team mode.
+
 ## `ls`
 
-Lists every name in the secrets file or the policy, with its status. Never prints values.
+Lists every name in the secrets file or the policy, with its status. Never prints values, and reads names without decrypting (SOPS keeps names in clear), so it needs no passphrase.
 
 ```text
 GITHUB_TOKEN                 api.github.com,github.com approval=never

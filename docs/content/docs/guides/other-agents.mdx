@@ -33,7 +33,7 @@ If the sandbox can't be applied, RabbitLock prints a warning and runs unsandboxe
 macOS can't nest one Seatbelt sandbox inside another. Agents that sandbox their own commands with Seatbelt (Codex CLI does on macOS) will have those commands fail inside RabbitLock's sandbox. Only Claude Code is handled automatically today, by configuring its own sandbox instead of wrapping it. For other self-sandboxing agents:
 
 1. Run with `rabbitlock run --sandbox off -- <agent>`.
-2. Configure the agent's own sandbox to deny reads of `~/.rabbitlock/identity` and `~/.rabbitlock/ca/rabbitlock-ca.key`, and writes to `~/.rabbitlock`, `rabbitlock.agent.yaml`, `secrets.sops.json` and `.rabbitlock/`.
+2. Configure the agent's own sandbox to deny reads of `~/.rabbitlock/identity` and `~/.rabbitlock/ca/rabbitlock-ca.key`, and writes to `~/.rabbitlock` and `rabbitlock.agent.yaml` (plus `secrets.sops.json` in team mode, and `.rabbitlock/` for policies from before 0.4).
 
 ## Tool compatibility
 

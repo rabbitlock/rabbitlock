@@ -33,6 +33,8 @@ secrets:
     approval: once
 ```
 
+**Individual or team.** By default your encrypted secrets stay on your machine (`~/.rabbitlock/projects/…`); the policy file is the only thing in the repo. To share secrets with teammates, run `rabbitlock team enable`, then `rabbitlock team add <their key> --name ana`. That puts the encrypted file in the repo, readable only by the people you add. See [Teams](https://rabbitlock.com/docs/guides/teams). Hosted team features and enterprise controls: [rabbitlock.com/plans](https://rabbitlock.com/plans).
+
 **Agents that set things up, not just use them:** `rabbitlock set ADMIN_PASSWORD --generate --reveal` creates a random secret and shows it once to you, not the agent. Use `--to-command` to send it to a password manager, or `--no-handoff` so nobody sees it. The agent can then create an admin account or configure a service through its API, using a credential it never sees. See [Let your agent set up accounts](https://rabbitlock.com/docs/guides/provisioning).
 
 ## What it protects, and what it doesn't

@@ -3,6 +3,15 @@ title: Changelog
 description: Releases and what's planned next.
 ---
 
+## 0.4.0 (2026-11-24)
+
+- **Individual mode by default.** `rabbitlock init` writes a `project` id. Encrypted secrets and receipts live in `~/.rabbitlock/projects/<project>/`, outside the repo, so there's nothing to gitignore and nothing to decide about committing. Existing policies keep working unchanged.
+- **Team mode:** `rabbitlock team enable | add | remove | ls` replaces hand-editing `recipients`. Recipients can be named (`{ name, key }`). `remove` lists the secrets to rotate.
+- `rabbitlock key` prints your public key.
+- `rabbitlock status` shows the mode and where secrets are stored.
+- **Optional passphrase on your identity:** `rabbitlock key protect | unprotect`. Commands that need your private key ask on your terminal, while `status`, `ls` and `key` don't. `RABBITLOCK_PASSPHRASE` covers automation. See [Protect your key with a passphrase](/concepts/encrypted-storage#protect-your-key-with-a-passphrase).
+- Secrets files and receipts are now written owner-only (`0600`), atomically.
+
 ## 0.3.0 (2026-11-24)
 
 - Agent-led setup: [rabbitlock.com/agents.md](https://rabbitlock.com/agents.md) and a Claude Code plugin (`/plugin install rabbitlock --marketplace rabbitlock/rabbitlock`). See [Set up with your agent](/guides/agent-setup).

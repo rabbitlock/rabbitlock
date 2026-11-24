@@ -1,48 +1,61 @@
 ---
 title: Teams
-description: Share encrypted secrets with teammates through git.
+description: Share encrypted secrets with teammates through git, and revoke access when someone leaves.
 ---
 
-Secrets are encrypted to a list of **recipients**, each identified by a public key. Anyone listed can decrypt; nobody else can.
+By default, a project is in **individual mode**: your encrypted secrets stay on your machine. **Team mode** moves them into the repository, encrypted for every teammate's public key, so the team shares one set of credentials without passing around a plaintext `.env`.
 
 <Steps>
 <Step>
 
-### Each teammate runs `rabbitlock init`
-
-It prints their public key. A public key is safe to share.
-
-</Step>
-<Step>
-
-### Add their keys to the policy
-
-```yaml title="rabbitlock.agent.yaml"
-recipients:
-  - 3f9a…   # you
-  - 8c21…   # teammate
-```
-
-</Step>
-<Step>
-
-### Re-encrypt
-
-Any `rabbitlock set` re-encrypts the whole file for everyone listed. Your own key is always included.
+### Turn on team mode (once per project)
 
 ```bash
-echo -n "$GITHUB_TOKEN" | rabbitlock set GITHUB_TOKEN
+rabbitlock team enable
 ```
 
-Commit `rabbitlock.agent.yaml` and `secrets.sops.json`.
+This moves your encrypted secrets into `secrets.sops.json` in the repo and lists you as the first **recipient** in `rabbitlock.agent.yaml`. Commit both files.
+
+</Step>
+<Step>
+
+### Each teammate sends you their public key
+
+In the repo, they run:
+
+```bash
+rabbitlock init     # creates their identity; keeps the existing policy
+rabbitlock key      # prints their public key, which is safe to share
+```
+
+</Step>
+<Step>
+
+### Add them
+
+```bash
+rabbitlock team add <their-key> --name ana
+```
+
+This re-encrypts the file so `ana` can decrypt it. Commit `rabbitlock.agent.yaml` and `secrets.sops.json`; once they pull, they can run `rabbitlock run -- claude` with the same secrets.
 
 </Step>
 </Steps>
 
+`rabbitlock team ls` shows who can decrypt.
+
 ## Removing someone
 
-Remove their key and re-encrypt. They can still decrypt **older versions** of `secrets.sops.json` from git history, so **rotate the underlying tokens** whenever someone leaves.
+```bash
+rabbitlock team remove ana
+```
+
+New versions of the file are no longer encrypted for them. They can still decrypt **older versions** from git history, so RabbitLock lists the secrets they had access to. **Rotate those tokens** at each provider, then store the new values with `rabbitlock set`.
 
 ## Policy changes are code changes
 
-`rabbitlock.agent.yaml` decides where each secret may go. Review changes to it like code, especially new hosts. During a session the agent can't modify it: the [sandbox](/concepts/sandbox) makes it read-only.
+`rabbitlock.agent.yaml` decides where each secret may go, for everyone on the team. Review changes to it like code, especially new hosts. During a session the agent can't modify it: the [sandbox](/concepts/sandbox) makes it read-only.
+
+## What's coming for teams
+
+Today, team mode shares secrets through git. The hosted team workspace (in early access) adds shared policy without commits, central receipts, approvals on Slack or your phone, and offboarding that tells you which tokens to rotate. See [plans](https://rabbitlock.com/plans).

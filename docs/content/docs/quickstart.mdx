@@ -33,9 +33,9 @@ This creates:
 
 - `~/.rabbitlock/identity`: your private key seed. Back it up and never commit it.
 - `~/.rabbitlock/ca/`: a local certificate authority, used to inspect requests to your allowed hosts.
-- `rabbitlock.agent.yaml`: your policy, with your public key as the first recipient. Commit it; it contains no secrets.
+- `rabbitlock.agent.yaml`: your policy. Commit it; it contains no secrets.
 
-Add `.rabbitlock/` to `.gitignore`. Receipts are written there.
+Your encrypted secrets and receipts are kept on your machine, in `~/.rabbitlock/projects/<project>`, so nothing secret goes in the repo. To share secrets with teammates later, see [Teams](/guides/teams).
 
 </Step>
 <Step>
@@ -48,7 +48,7 @@ echo -n "$GITHUB_TOKEN" | rabbitlock set GITHUB_TOKEN
 rabbitlock set STRIPE_API_KEY
 ```
 
-Values are encrypted into `secrets.sops.json`, which you commit too.
+Values are encrypted on your machine. Already have a `.env`? `rabbitlock import .env --delete` stores all of it in one step.
 
 </Step>
 <Step>

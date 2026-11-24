@@ -10,7 +10,8 @@ import { spawnSync } from "node:child_process";
  *  - writing anything under RABBITLOCK_HOME (so the CA and identity cannot be replaced)
  *  - writing the policy, the encrypted secrets file and the receipts (so an injected agent
  *    cannot widen its own policy for the next run or erase its tracks)
- *  - when the seed came from RABBITLOCK_SEED_HEX: inspecting other processes, because on macOS
+ *  - when the seed or passphrase came from the environment (RABBITLOCK_SEED_HEX, RABBITLOCK_PASSPHRASE):
+ *    inspecting other processes, because on macOS
  *    and Linux a same-user process can otherwise read the broker's environment
  *
  * macOS uses Seatbelt (sandbox-exec). Linux uses bubblewrap (bwrap) with a private PID namespace.

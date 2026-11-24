@@ -9,6 +9,7 @@ description: Variables RabbitLock reads, sets for the agent, and removes.
 | --- | --- |
 | `RABBITLOCK_HOME` | Directory for the identity and local CA. Default `~/.rabbitlock`. |
 | `RABBITLOCK_SEED_HEX` | Identity seed (64 hex characters) instead of the identity file. Intended for automation. When it's set, the sandbox also hides other processes. |
+| `RABBITLOCK_PASSPHRASE` | Unlocks a passphrase-protected identity without the terminal prompt. Intended for automation; it puts the passphrase in the environment. When it's set, the sandbox also hides other processes. |
 | `RABBITLOCK_APPROVER` | `allow` or `deny` answers approval prompts without a dialog |
 
 ## Set for the agent

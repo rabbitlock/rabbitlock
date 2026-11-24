@@ -47,7 +47,7 @@ export function planLaunch(command, args, paths, { mode, hideProcesses }) {
       args: ["--settings", JSON.stringify(claudeSessionSettings(paths)), ...args],
       sandbox: "claude-settings",
       warning: hideProcesses
-        ? "RABBITLOCK_SEED_HEX is set; Claude Code's sandbox may not hide the broker's environment. Prefer the identity file."
+        ? "RABBITLOCK_SEED_HEX or RABBITLOCK_PASSPHRASE is set; Claude Code's sandbox may not hide the broker's environment. Prefer the identity file and the terminal prompt."
         : undefined,
     };
   }
@@ -69,7 +69,7 @@ export function planLaunch(command, args, paths, { mode, hideProcesses }) {
 /**
  * Builds the agent's environment: real values never enter it.
  * - every brokered secret name maps to its placeholder
- * - RABBITLOCK_* (identity seed, test hooks) are removed
+ * - RABBITLOCK_* (identity seed, passphrase, test hooks) are removed
  * - any other variable whose value equals a brokered secret is removed
  * - proxy + CA trust variables point tools at the broker
  */
@@ -103,8 +103,10 @@ export function buildChildEnv(parentEnv, { placeholders, values, proxyUrl, ca, s
 }
 
 export async function runBrokered(policy, command, args, { quiet = false, sandbox = "auto" } = {}) {
-  const seedFromEnv = Boolean(process.env.RABBITLOCK_SEED_HEX);
-  const { privateKey } = keypairFromSeed(loadSeed());
+  // Key material in the broker's environment is readable by same-user processes on macOS, so the
+  // sandbox also hides other processes from the agent in that case.
+  const keyFromEnv = Boolean(process.env.RABBITLOCK_SEED_HEX || process.env.RABBITLOCK_PASSPHRASE);
+  const { privateKey } = keypairFromSeed(await loadSeed());
   const stored = readSecretsFile(policy.secretsFile, privateKey);
 
   const names = Object.keys(policy.secrets);
@@ -132,7 +134,7 @@ export async function runBrokered(policy, command, args, { quiet = false, sandbo
     command,
     args,
     protectedPaths({ home: rabbitlockHome(), policyPath: policy.path, secretsFile: policy.secretsFile, receiptsPath: policy.receipts }),
-    { mode: sandbox, hideProcesses: seedFromEnv },
+    { mode: sandbox, hideProcesses: keyFromEnv },
   );
   if (launch.warning) {
     process.stderr.write(`rabbitlock: WARNING: ${launch.warning}\n`);
